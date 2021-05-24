@@ -15,6 +15,7 @@ int main(int argc, const char * argv[]) {
 	char *filename = "/Users/yan/Downloads/SAMPLE-AAA/_Hifi.ivc";
 	printf("reading catalog %s\r", filename);
 	IVCOpen(filename, &status);
+	IVCReport();
 	IVCClose();
 	
 	if( status == 0 )

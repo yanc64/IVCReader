@@ -27,6 +27,7 @@
 /* Begin PBXFileReference section */
 		2C2CBF6226556BFB006D96A4 /* ivr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ivr; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C2CBF6526556BFB006D96A4 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		2C3CAF73265AD6D90071B169 /* xmlIO.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xmlIO.c; path = "../../../iView_Develop/iView_Dev/iView LIB/ICL/source_lib/xmlIO.c"; sourceTree = "<group>"; };
 		2C85615F26578FCC00988D91 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		2C856163265791A200988D91 /* iview_defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_defs.h; sourceTree = "<group>"; };
 		2CA83CDF2659527300DE9E17 /* iview_read.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iview_read.c; sourceTree = "<group>"; };
@@ -49,6 +50,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2CBF6426556BFB006D96A4 /* ivr */,
+				2C3CAF72265AD6CA0071B169 /* New Group */,
 				2CA83CBE2658C70100DE9E17 /* References (Not linked) */,
 				2C2CBF6326556BFB006D96A4 /* Products */,
 				2C85615E26578FCC00988D91 /* Frameworks */,
@@ -71,6 +73,15 @@
 				2CA83CE12659527A00DE9E17 /* iview_read.h */,
 				2C856163265791A200988D91 /* iview_defs.h */,
 			);
+			path = ivr;
+			sourceTree = "<group>";
+		};
+		2C3CAF72265AD6CA0071B169 /* New Group */ = {
+			isa = PBXGroup;
+			children = (
+				2C3CAF73265AD6D90071B169 /* xmlIO.c */,
+			);
+			name = "New Group";
 			path = ivr;
 			sourceTree = "<group>";
 		};
