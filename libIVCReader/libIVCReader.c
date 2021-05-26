@@ -1,15 +1,15 @@
 //
-//  iview_read.c
-//  ivr
+//  libIVCReader.c
+//  libIVCReader
 //
-//  Created by Yannis Calotychos on 19/5/21.
+//  Created by Yannis Calotychos on 21/05/2021.
+//  Copyright © 2021 Smart Toolbox Ideas. All rights reserved.
 //
 
-#include "iview_read.h"
-#include "iview_priv.h"
-
-// TODO: Make Lib
-// TODO: flags to label / rating
+#include <CoreServices/CoreServices.h>	// Needed Types & for Endian Conversions
+#include <iconv.h>						// Needed for unicode conversion
+#include "private.h"
+#include "libIVCReader.h"
 
 // Local cariables
 static UInt32		gFileCount;
@@ -22,7 +22,7 @@ static DataFeed 	outFeed;
 
 enum {
 	text_outString, // null terminated
-	text_utf16 = 102, text_utf8 = 100, text_ascii = 101
+	number_sint16_native = 100, text_utf16, text_utf8, text_ascii
 };
 
 
@@ -34,17 +34,17 @@ void IVCOpen(char *filename, SInt16 *outTotal, SInt16 *outStatus)
 {
 	UInt32 total = 0;
 	OSErr myErr = noErr;
-
+	
 	gfp = fopen(filename, "r");
 	if( !gfp )
 	{
 		myErr = fileNotFoundErr;
 		goto bail;
 	}
-
+	
 	UInt32	bytes;
 	UInt32	version;
-
+	
 	/////////////////
 	// READ THE FILE HEADER
 	bytes = 4;
@@ -73,11 +73,11 @@ void IVCOpen(char *filename, SInt16 *outTotal, SInt16 *outStatus)
 		myErr = unsupportedVersionErr;
 		goto bail;
 	}
-
+	
 	/////////////////
 	// READ CATALOG EXTRAS
 	gFileCount = total;
-
+	
 bail:
 	if( outStatus )
 		*outStatus = myErr;
@@ -110,64 +110,68 @@ void IVCClose(void)
 }
 
 ////
-void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType, void *data, const UInt32 size)
+void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *data, const UInt32 size)
 {
 	UInt32 *	uint32	= (UInt32 *)data;
 	SInt32 *	sint32	= (SInt32 *)data;
 	SInt16 *	sint16	= (SInt16 *)data;
 	char *cstr;
-
+	
 	
 	if( outFeed )
 		switch( fieldType )
 		{
 			case text_outString:
-				outFeed(uid, fieldName, string_utf8, data);
+				outFeed(uid, fName, string_utf8, data);
 				break;
 				
 			case text_utf16:
 				cstr = UTF8_FROM_UTF16(data, size);
-				outFeed(uid, fieldName, string_utf8, cstr);
+				outFeed(uid, fName, string_utf8, cstr);
 				free(cstr);
 				break;
-
+				
 			case text_ascii:
 				cstr = UTF8_FROM_ASCII(data, size);
-				outFeed(uid, fieldName, string_utf8, cstr);
+				outFeed(uid, fName, string_utf8, cstr);
 				free(cstr);
 				break;
-
+				
 			case text_utf8:
 				cstr = UTF8_FROM_UTF8(data, size);
-				outFeed(uid, fieldName, string_utf8, cstr);
+				outFeed(uid, fName, string_utf8, cstr);
 				free(cstr);
+				break;
+				
+			case number_sint16_native:
+				outFeed(uid, fName, number_sint16, data);
 				break;
 				
 			case number_sint16:
 				*sint16 = EndianS16_BtoN(*sint16);
-				outFeed(uid, fieldName, fieldType, data);
+				outFeed(uid, fName, fieldType, data);
 				break;
 				
 			case number_uint32:
 				*uint32 = EndianU32_BtoN(*uint32);
-				outFeed(uid, fieldName, fieldType, data);
+				outFeed(uid, fName, fieldType, data);
 				break;
-
+				
 			case number_sint32:
 				*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fieldName, fieldType, data);
+				outFeed(uid, fName, fieldType, data);
 				break;
 				
 			case number_rational:
 				for(int i=0; i<2; i++, sint32++)
 					*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fieldName, fieldType, data);
+				outFeed(uid, fName, fieldType, data);
 				break;
-
+				
 			case number_rational3:
 				for(int i=0; i<6; i++, sint32++)
 					*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fieldName, fieldType, data);
+				outFeed(uid, fName, fieldType, data);
 				break;
 		}
 }
@@ -185,14 +189,14 @@ static OSErr ReadCatalogChunks(FILE *fp)
 	UInt32		chunkBytes;
 	UInt32		offset;
 	UInt32		bytes;
-
+	
 	// go to the contents offset
 	bytes = 4;
 	if((myErr = myfseek(fp, SEEK_END, -4)) ||
 	   (myErr = myfread(fp, &bytes, &offset)) ||
 	   (myErr = myfseek(fp, SEEK_SET, EndianU32_BtoN(offset))))
 		return myErr;
-
+	
 	// read all sets until we hit chunkTag = kCatalogFileFormat or an error
 	while( !myErr )
 	{
@@ -212,7 +216,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 		
 		// printf("\r--- %s\r", FourCC2Str(chunkTag));
 		gCurrentChuckOffset = (UInt32) ftell(fp);
-
+		
 		switch( chunkTag )
 		{
 			case kCatalogUserFieldsTag:
@@ -248,7 +252,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 						myErr = wrongFileCountErr;
 					else
 						myErr = ReadFileCells(fp, (CellInfo *)chunkData, gFileCount);
-
+					
 					if( !myErr )
 						myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
 					free(chunkData);
@@ -282,7 +286,7 @@ static void ParseMorsels(char *masterData, UInt32 masterSize)
 		memcpy(&fieldTag, &masterData[bytesRead], bytes = 4);
 		fieldTag = EndianU32_BtoN(fieldTag);
 		bytesRead += bytes;
-
+		
 		// Ignore : 2 bytes
 		bytes = 2;
 		bytesRead += bytes;
@@ -291,14 +295,14 @@ static void ParseMorsels(char *masterData, UInt32 masterSize)
 		memcpy(&listSize, &masterData[bytesRead], bytes = 4);
 		listSize = EndianU32_BtoN(listSize);
 		bytesRead += bytes;
-
+		
 		// Process morsels (we only care for Catalog Sets :
 		// In newer versions Catalog Sets also includes hierarchycal keywords tree
 		// The root for this tree set is "@KeywordsSet"
 		// printf("processing morsels with fieldTag %#010x (size %u)\r", fieldTag, (unsigned int)listSize);
 		if( fieldTag == kCatalogSetField && listSize )
 			UnflattenStart(&masterData[bytesRead], listSize, unflattenMorselProc);
-
+		
 		bytesRead += listSize;
 	}
 }
@@ -326,11 +330,11 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 		uids = (UInt32 *)p;
 		p += (4 * uidCount);
 	}
-
+	
 	////////////////////////////////////
 	// Morsel names are always stored on disc in UTF16 format.
 	// We'll convert to UTF8 before
-
+	
 	// name size, 4 bytes
 	memcpy(&nameBytes, p, 4);
 	nameBytes = EndianU32_BtoN(nameBytes);
@@ -342,12 +346,12 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 	{
 		char pathString[10480];
 		sprintf(pathString, "%s/%s", path, name);
-
-		char *fieldName;
-		fieldName = gMorselIsHK ? "PATH_KeywordTree":"PATH_SetTree";
-			
+		
+		char *fName;
+		fName = gMorselIsHK ? "PATH_KeywordTree":"PATH_SetTree";
+		
 		for(UInt32 i=0; i<uidCount; i++)
-			dataFeed(EndianU32_BtoN(uids[i]), fieldName, text_outString, pathString, 0);
+			dataFeed(EndianU32_BtoN(uids[i]), fName, text_outString, pathString, 0);
 	}
 	
 	return name;
@@ -356,7 +360,7 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 ////
 static char *unflattenUFieldProc(char *path, void *inData, UInt32 inSize)
 {
-	dataFeed(gUserFieldCount++, "DEF_UserField", text_utf16, inData, inSize);
+	dataFeed(gUserFieldCount++, "DEFN_UserField", text_utf16, inData, inSize);
 	return nil;
 }
 
@@ -370,8 +374,8 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 	UInt32 *fileUids = nil;
 	UInt32 *nameLengths = nil;
 	UInt32 *subFolderOffsets = nil;
-
-
+	
+	
 	char path[10240];
 	
 	data_chunk_header dch;
@@ -380,10 +384,10 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 	
 	OSErr myErr;
 	
-
+	
 	////////////////////
 	// read chunk header
-
+	
 	bytes = sizeof(dch);
 	if((myErr = myfread(fp, &bytes, &dch)))
 		goto bail;
@@ -394,11 +398,11 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		myErr = FoldersChunkIdentifierError;
 		goto bail;
 	}
-
-
+	
+	
 	////////////////////
 	// read header
-
+	
 	bytes = sizeof(fh);
 	if((myErr = myfread(fp, &bytes, &fh)))
 		goto bail;
@@ -410,11 +414,11 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 	fh.flags 				= EndianU32_BtoN(fh.flags);
 	fh.parent_folder_offset = EndianU32_BtoN(fh.parent_folder_offset);
 	fh.script_ref_offset	= EndianU32_BtoN(fh.script_ref_offset);
-
-
+	
+	
 	////////////////////
 	// read in unicode name UTF16 & Convert to UTF8
-
+	
 	if( fh.modern_name_length )
 	{
 		bytes = fh.modern_name_length;
@@ -423,12 +427,12 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		folderName = UTF8_FROM_UTF16(nameBuf, bytes);
 		free(nameBuf);
 	}
-
-
+	
+	
 	////////////////////
 	// read in legacy name
 	// will ignore if we have modern_name_length
-
+	
 	if( fh.legacy_name_length )
 	{
 		bytes = fh.legacy_name_length;
@@ -452,21 +456,21 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 	}
 	else
 		path[0] = 0;
-
+	
 	////////////////////
 	// read in alias (we don't need this)
-
+	
 	if( fh.alias_length )
 	{
 		bytes = fh.alias_length;
 		if((myErr = myfseek(fp, SEEK_CUR, bytes)))
 			goto bail;
 	}
-
-
+	
+	
 	////////////////////
 	// read in file uids
-
+	
 	if( fh.num_items )
 	{
 		bytes = sizeof(UInt32) * fh.num_items;
@@ -476,7 +480,7 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		for(UInt32 i=0; i < fh.num_items; i++)
 			fileUids[i] = EndianU32_BtoN(fileUids[i]);
 	}
-
+	
 	//////////////////////
 	// read in unicode file names
 	
@@ -500,14 +504,14 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 			strcpy(filePath, path);
 			strcat(filePath, "/");
 			strcat(filePath, fileName);
-
+			
 			free(fileName);
 			free(fileNameBuffer);
-
-			dataFeed(fileUids[i], "FILE_Path", text_outString, filePath, 0);
+			
+			dataFeed(fileUids[i], "PATH_File", text_outString, filePath, 0);
 		}
 	}
-
+	
 	///////////////////////////////
 	// read in subfolders (recurse)
 	
@@ -525,8 +529,8 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 				myErr = ReadFolders(fp, path);
 		}
 	}
-
-
+	
+	
 bail:
 	if( folderName )		free(folderName);
 	if( fileUids )			free(fileUids);
@@ -548,6 +552,16 @@ static OSErr ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total)
 	{
 		ci->catoffset	= EndianU32_BtoN(ci->catoffset);
 		ci->uniqueID 	= EndianU32_BtoN(ci->uniqueID);
+		
+		SInt16 v;
+		
+		v = ci->flags.label;
+		if( v )
+			dataFeed(ci->uniqueID, fieldName(kIPTCRatingField), number_sint16_native, &v, 0);
+
+		v = ci->flags.rating;
+		if( v )
+			dataFeed(ci->uniqueID, fieldName(kIPTCRatingField), number_sint16_native, &v, 0);
 
 		myErr = ReadFileBlocks(fp, ci);
 	}
@@ -569,14 +583,14 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 	if((myErr = myfseek(fp, SEEK_SET, offset)) ||
 	   (myErr = myfread(fp, &bytes, &cache.info)) )
 		return myErr;
-	ParseBlockInfo(ci->uniqueID, &cache.info);
+	ParseBlockINFO(ci->uniqueID, &cache.info);
 	
 	cache.info.talkSize = EndianS32_BtoN(cache.info.talkSize);
 	cache.info.metaSize = EndianS32_BtoN(cache.info.metaSize);
 	cache.info.pictSize = EndianS32_BtoN(cache.info.pictSize);
 	cache.info.iptcSize = EndianS32_BtoN(cache.info.iptcSize);
 	cache.info.urlfSize = EndianS32_BtoN(cache.info.urlfSize);
-
+	
 	///////
 	// Iptc
 	if( cache.info.iptcSize )
@@ -609,7 +623,7 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
 			return myErr;
-		ParseBlockText(ci->uniqueID, data, bytes, kSourceURLField);
+		dataFeed(ci->uniqueID, fieldName(kINFOURLSourceField), text_ascii, data, bytes);
 		free(data);
 	}
 	
@@ -617,70 +631,63 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 }
 
 ////
-static void ParseBlockInfo(const UInt32 uid, ItemInfo *in)
+static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 {
-//	in->importTicks				= EndianS32_BtoN(in->importTicks);
-//	in->type					= EndianU32_BtoN(in->type);
-//	in->show.tm_mode			= EndianS32_BtoN(in->show.tm_mode);
-//	in->show.tm_secs			= EndianS32_BtoN(in->show.tm_secs);
-//	in->fileSize				= EndianS32_BtoN(in->fileSize);
-
+	//	in->importTicks				= EndianS32_BtoN(in->importTicks);
+	//	in->type					= EndianU32_BtoN(in->type);
+	//	in->show.tm_mode			= EndianS32_BtoN(in->show.tm_mode);
+	//	in->show.tm_secs			= EndianS32_BtoN(in->show.tm_secs);
+	//	in->fileSize				= EndianS32_BtoN(in->fileSize);
+	
 	dataFeed(uid, "INFO_width"       , number_sint32, &in->width, 1);
 	dataFeed(uid, "INFO_height"      , number_sint32, &in->height, 1);
 	dataFeed(uid, "INFO_resolution"  , number_sint32, &in->resolution, 1);
 	dataFeed(uid, "INFO_depth"       , number_sint32, &in->depth, 1);
-
+	
 	dataFeed(uid, "INFO_pages"		 , number_sint32, &in->pages, 1);
 	dataFeed(uid, "INFO_tracks"		 , number_sint32, &in->tracks, 1);
 	dataFeed(uid, "INFO_duration"	 , number_sint32, &in->duration, 1);
 	dataFeed(uid, "INFO_channels"	 , number_sint32, &in->channels, 1);
 	dataFeed(uid, "INFO_sampleRate"	 , number_sint32, &in->sampleRate, 1);
 	dataFeed(uid, "INFO_sampleSize"	 , number_sint32, &in->sampleSize, 1);
-
+	
 	dataFeed(uid, "INFO_vdFrameRate" , number_uint32, &in->vdFrameRate, 1);
 	dataFeed(uid, "INFO_avDataRate"	 , number_uint32, &in->avDataRate, 1);
 	dataFeed(uid, "INFO_colorSpace"	 , number_uint32, &in->colorSpace, 1);
-
 	
-//	in->sampleColor				= EndianU32_BtoN(in->sampleColor);
-//	in->legacy_alias.type		= EndianS32_BtoN(in->legacy_alias.type);
-//	in->legacy_alias.orig_size	= EndianS16_BtoN(in->legacy_alias.orig_size);
-//	in->legacy_alias.size		= EndianS16_BtoN(in->legacy_alias.size);
-//	in->rotate					= EndianU16_BtoN(in->rotate);
-//	in->archived				= EndianU32_BtoN(in->archived);
-//	in->created					= EndianU32_BtoN(in->created);
-//	in->modified				= EndianU32_BtoN(in->modified);
-//	in->annotated				= EndianU32_BtoN(in->annotated);
-//	in->poster					= EndianS32_BtoN(in->poster);
-//	in->pages					= EndianS32_BtoN(in->pages);
-//	in->tracks					= EndianS32_BtoN(in->tracks);
-//	in->duration				= EndianS32_BtoN(in->duration);
-//	in->channels				= EndianS32_BtoN(in->channels);
-//	in->sampleRate				= EndianS32_BtoN(in->sampleRate);
-//	in->sampleSize				= EndianS32_BtoN(in->sampleSize);
-//	in->vdFrameRate				= EndianU32_BtoN(in->vdFrameRate);
-//	in->avDataRate				= EndianU32_BtoN(in->avDataRate);
-//	in->colorSpace				= EndianU32_BtoN(in->colorSpace);
-//	in->compression				= EndianS32_BtoN(in->compression);
-//	in->textCharacters			= EndianS32_BtoN(in->textCharacters);
-//	in->textParagraphs			= EndianS32_BtoN(in->textParagraphs);
-//	in->vdQuality				= EndianU32_BtoN(in->vdQuality);
-//	in->scratch					= EndianS32_BtoN(in->scratch);
-//	in->talkSize				= EndianS32_BtoN(in->talkSize);
-//	in->metaSize				= EndianS32_BtoN(in->metaSize);
-//	in->pictSize				= EndianS32_BtoN(in->pictSize);
-//	in->iptcSize				= EndianS32_BtoN(in->iptcSize);
-//	in->urlfSize				= EndianS32_BtoN(in->urlfSize);
+	
+	//	in->sampleColor				= EndianU32_BtoN(in->sampleColor);
+	//	in->legacy_alias.type		= EndianS32_BtoN(in->legacy_alias.type);
+	//	in->legacy_alias.orig_size	= EndianS16_BtoN(in->legacy_alias.orig_size);
+	//	in->legacy_alias.size		= EndianS16_BtoN(in->legacy_alias.size);
+	//	in->rotate					= EndianU16_BtoN(in->rotate);
+	//	in->archived				= EndianU32_BtoN(in->archived);
+	//	in->created					= EndianU32_BtoN(in->created);
+	//	in->modified				= EndianU32_BtoN(in->modified);
+	//	in->annotated				= EndianU32_BtoN(in->annotated);
+	//	in->poster					= EndianS32_BtoN(in->poster);
+	//	in->pages					= EndianS32_BtoN(in->pages);
+	//	in->tracks					= EndianS32_BtoN(in->tracks);
+	//	in->duration				= EndianS32_BtoN(in->duration);
+	//	in->channels				= EndianS32_BtoN(in->channels);
+	//	in->sampleRate				= EndianS32_BtoN(in->sampleRate);
+	//	in->sampleSize				= EndianS32_BtoN(in->sampleSize);
+	//	in->vdFrameRate				= EndianU32_BtoN(in->vdFrameRate);
+	//	in->avDataRate				= EndianU32_BtoN(in->avDataRate);
+	//	in->colorSpace				= EndianU32_BtoN(in->colorSpace);
+	//	in->compression				= EndianS32_BtoN(in->compression);
+	//	in->textCharacters			= EndianS32_BtoN(in->textCharacters);
+	//	in->textParagraphs			= EndianS32_BtoN(in->textParagraphs);
+	//	in->vdQuality				= EndianU32_BtoN(in->vdQuality);
+	//	in->scratch					= EndianS32_BtoN(in->scratch);
+	//	in->talkSize				= EndianS32_BtoN(in->talkSize);
+	//	in->metaSize				= EndianS32_BtoN(in->metaSize);
+	//	in->pictSize				= EndianS32_BtoN(in->pictSize);
+	//	in->iptcSize				= EndianS32_BtoN(in->iptcSize);
+	//	in->urlfSize				= EndianS32_BtoN(in->urlfSize);
 	
 	//	EndianText_BtoN(&in->legacy_name[1], in->legacy_name[0]);
 	//	EndianText_BtoN(&in->legacy_path[1], in->legacy_path[0]);
-}
-
-////
-static void ParseBlockText(const UInt32 uid, const Ptr buf, const UInt32 len, OSType tag)
-{
-	const char *fname = fieldName(tag);
-	dataFeed(uid, fname, text_ascii, buf, len);
 }
 
 ////
@@ -725,7 +732,7 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 	// We no longer support structures prior to iView MediaPro v1.0
 	if( !buf || *p == 'C' ||  *p == 'I' || *p == 'M' )
 		return;
-
+	
 	do
 	{
 		fud *m = (fud *) p;
@@ -741,13 +748,13 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 		{
 				// ASCII
 				// These 4 fields are have 4 bytes at the beggining of the data buffer that are not used.
-			case kMetaMakerField				:
-			case kMetaModelField				:
-			case kMetaSoftwareField				:
-			case kMetaFormatField				: dataFeed(uid, fname, text_ascii,       &m->buf[4], l-12); break;
+			case kEXIFMakerField				:
+			case kEXIFModelField				:
+			case kEXIFSoftwareField				:
+			case kEXIFFormatField				: dataFeed(uid, fname, text_ascii,       &m->buf[4], l-12); break;
 				
 			case kEXIFLensField					: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
-
+				
 			case kEXIFMeteringModeField			:
 			case kEXIFContrastField      		:
 			case kEXIFSaturationField      		:
@@ -768,7 +775,7 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 			case kEXIFExposureBiasField      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
 				
 			case kEXIFCaptureDateField			: dataFeed(uid, fname, number_uint32,    m->buf, 1); break;
-
+				
 			case kGPSLatitudeField		      	:
 			case kGPSLongitudeField		      	: dataFeed(uid, fname, number_rational3, m->buf, 1); break;
 			case kGPSLatitudeRefField			:
@@ -804,12 +811,12 @@ static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, bool ro
 	UInt32	flags;
 	UInt32	clientDataSize;
 	char	tag = 0;
-
+	
 	UInt32	ll = 0;
-
+	
 	char pp[10280];
 	strcpy(pp, path);
-
+	
 	while( !done && flatSize > 0 )
 	{
 		tag = *flatData;
@@ -905,14 +912,14 @@ static OSErr ReadAsPtr(FILE *fp, Ptr *p, UInt32 databytes)
 		myErr = memoryErr;
 		goto bail;
 	}
-
+	
 	myErr = myfread(fp, &databytes, *p);
 	if( myErr )
 	{
 		free(*p);
 		*p = nil;
 	}
-
+	
 bail:
 	return myErr;
 }
@@ -977,93 +984,95 @@ static const char *fieldName(UInt32 tag)
 {
 	switch( tag )
 	{
-		case kIPTCHeadlineField				: return "IPTC_Headline" ;
-		case kIPTCTitleField				: return "IPTC_Title" ;
-		case kIPTCPrimaryCategoryField		: return "IPTC_PrimaryCategory" ;
-		case kIPTCIntellectualGenreField	: return "IPTC_IntellectualGenre";
-		case kIPTCEventField				: return "IPTC_Event" ;
-		case kIPTCEventDateField			: return "IPTC_EventDate" ;
-		case kIPTCCreatorField				: return "IPTC_Creator" ;
-		case kIPTCCreatorTitleField			: return "IPTC_CreatorTitle" ;
-		case kIPTCCreatorAddressField  		: return "IPTC_CreatorAddress";
-		case kIPTCCreatorCityField			: return "IPTC_CreatorCity";
-		case kIPTCCreatorStateField			: return "IPTC_CreatorState";
-		case kIPTCCreatorPostcodeField		: return "IPTC_CreatorPostcode";
-		case kIPTCCreatorCountryField		: return "IPTC_CreatorCountry";
-		case kIPTCCreatorPhoneField			: return "IPTC_CreatorPhone";
-		case kIPTCCreatorEmailField			: return "IPTC_CreatorEmail";
-		case kIPTCCreatorURLField			: return "IPTC_CreatorURL";
-		case kIPTCCreditField				: return "IPTC_Credit" ;
-		case kIPTCSourceField				: return "IPTC_Source" ;
-		case kIPTCCopyrightField			: return "IPTC_Copyright" ;
-		case kIPTCTransmissionField			: return "IPTC_Transmission" ;
-		case kIPTCUsageTermsField			: return "IPTC_UsageTerms";
-		case kIPTCURLField					: return "IPTC_URL" ;
-		case kIPTCLocationField				: return "IPTC_Location" ;
-		case kIPTCCityField					: return "IPTC_City" ;
-		case kIPTCStateField				: return "IPTC_State" ;
-		case kIPTCCountryField				: return "IPTC_Country" ;
-		case kIPTCCountryCodeField			: return "IPTC_CountryCode";
-		case kIPTCInstructionsField			: return "IPTC_Instructions" ;
-		case kIPTCStatusField				: return "IPTC_Status" ;
-		case kIPTCCaptionWriterField		: return "IPTC_CaptionWriter" ;
-		case kIPTCCaptionField				: return "IPTC_Caption" ;
-		case kIPTCPeopleField				: return "IPTC_People" ;
-		case kIPTCKeywordField				: return "IPTC_Keyword" ;
-		case kIPTCCategoryField				: return "IPTC_Category" ;
-		case kIPTCSceneField				: return "IPTC_Scene";
-		case kIPTCSubjectReferenceField		: return "IPTC_SubjectReference";
+		case kIPTCLabelField				: return kINFOLabel;
+		case kIPTCRatingField				: return kINFORating;
+
+		case kINFOURLSourceField			: return kINFOURLSource;
+
+		case kIPTCHeadlineField				: return kIPTCHeadline;
+		case kIPTCTitleField				: return kIPTCTitle;
+		case kIPTCPrimaryCategoryField		: return kIPTCPrimaryCategory;
+		case kIPTCIntellectualGenreField	: return kIPTCIntellectualGenre;
+		case kIPTCEventField				: return kIPTCEvent;
+		case kIPTCEventDateField			: return kIPTCEventDate;
+		case kIPTCCreatorField				: return kIPTCCreator;
+		case kIPTCCreatorTitleField			: return kIPTCCreatorTitle;
+		case kIPTCCreatorAddressField  		: return kIPTCCreatorAddress;
+		case kIPTCCreatorCityField			: return kIPTCCreatorCity;
+		case kIPTCCreatorStateField			: return kIPTCCreatorState;
+		case kIPTCCreatorPostcodeField		: return kIPTCCreatorPostcode;
+		case kIPTCCreatorCountryField		: return kIPTCCreatorCountry;
+		case kIPTCCreatorPhoneField			: return kIPTCCreatorPhone;
+		case kIPTCCreatorEmailField			: return kIPTCCreatorEmail;
+		case kIPTCCreatorURLField			: return kIPTCCreatorURL;
+		case kIPTCCreditField				: return kIPTCCredit;
+		case kIPTCSourceField				: return kIPTCSource;
+		case kIPTCCopyrightField			: return kIPTCCopyright;
+		case kIPTCTransmissionField			: return kIPTCTransmission;
+		case kIPTCUsageTermsField			: return kIPTCUsageTerms;
+		case kIPTCURLField					: return kIPTCURL;
+		case kIPTCLocationField				: return kIPTCLocation;
+		case kIPTCCityField					: return kIPTCCity;
+		case kIPTCStateField				: return kIPTCState;
+		case kIPTCCountryField				: return kIPTCCountry;
+		case kIPTCCountryCodeField			: return kIPTCCountryCode;
+		case kIPTCInstructionsField			: return kIPTCInstructions;
+		case kIPTCStatusField				: return kIPTCStatus;
+		case kIPTCCaptionWriterField		: return kIPTCCaptionWriter;
+		case kIPTCCaptionField				: return kIPTCCaption;
+		case kIPTCPeopleField				: return kIPTCPeople;
+		case kIPTCKeywordField				: return kIPTCKeyword;
+		case kIPTCCategoryField				: return kIPTCCategory;
+		case kIPTCSceneField				: return kIPTCScene;
+		case kIPTCSubjectReferenceField		: return kIPTCSubjectReference;
 			
-		case kMetaMakerField				: return "Meta_Maker" ;
-		case kMetaModelField				: return "Meta_Model" ;
-		case kMetaSoftwareField				: return "Meta_Software" ;
-		case kMetaFormatField				: return "Meta_Format" ;
+		case kEXIFMakerField				: return kEXIFMaker;
+		case kEXIFModelField				: return kEXIFModel;
+		case kEXIFSoftwareField				: return kEXIFSoftware;
+		case kEXIFFormatField				: return kEXIFFormat;
+		case kEXIFVersionField				: return kEXIFVersion;
+		case kEXIFCaptureDateField			: return kEXIFCaptureDate;
+		case kEXIFProgramField				: return kEXIFProgram;
+		case kEXIFISOSpeedField				: return kEXIFISOSpeed;
+		case kEXIFExposureBiasField			: return kEXIFExposureBias;
+		case kEXIFShutterSpeedField			: return kEXIFShutterSpeed;
+		case kEXIFApertureField				: return kEXIFAperture;
+		case kEXIFFocusDistanceField		: return kEXIFFocusDistance;
+		case kEXIFMeteringModeField			: return kEXIFMeteringMode;
+		case kEXIFLightSourceField			: return kEXIFLightSource;
+		case kEXIFFlashField				: return kEXIFFlash;
+		case kEXIFFocalLengthField			: return kEXIFFocalLength;
+		case kEXIFSensingMethodField		: return kEXIFSensingMethod;
+		case kEXIFNoiseReductionField		: return kEXIFNoiseReduction;
+		case kEXIFContrastField				: return kEXIFContrast;
+		case kEXIFSharpnessField			: return kEXIFSharpness;
+		case kEXIFSaturationField			: return kEXIFSaturation;
+		case kEXIFFocusModeField			: return kEXIFFocusMode;
+		case kEXIFDigitalZoomField			: return kEXIFDigitalZoom;
+		case kEXIFLensField					: return kEXIFLens;
 			
-		case kSourceURLField				: return "URL_Source" ;
-			
-		case kEXIFVersionField				: return "EXIF_Version" ;
-		case kEXIFCaptureDateField			: return "EXIF_CaptureDate" ;
-		case kEXIFProgramField				: return "EXIF_Program" ;
-		case kEXIFISOSpeedField				: return "EXIF_ISOSpeed" ;
-		case kEXIFExposureBiasField			: return "EXIF_ExposureBias" ;
-		case kEXIFShutterSpeedField			: return "EXIF_ShutterSpeed" ;
-		case kEXIFApertureField				: return "EXIF_Aperture" ;
-		case kEXIFFocusDistanceField		: return "EXIF_FocusDistance" ;
-		case kEXIFMeteringModeField			: return "EXIF_MeteringMode" ;
-		case kEXIFLightSourceField			: return "EXIF_LightSource" ;
-		case kEXIFFlashField				: return "EXIF_Flash" ;
-		case kEXIFFocalLengthField			: return "EXIF_FocalLength" ;
-		case kEXIFSensingMethodField		: return "EXIF_SensingMethod" ;
-		case kEXIFNoiseReductionField		: return "EXIF_NoiseReduction" ;
-		case kEXIFContrastField				: return "EXIF_Contrast" ;
-		case kEXIFSharpnessField			: return "EXIF_Sharpness" ;
-		case kEXIFSaturationField			: return "EXIF_Saturation" ;
-		case kEXIFFocusModeField			: return "EXIF_FocusMode" ;
-		case kEXIFDigitalZoomField			: return "EXIF_DigitalZoom" ;
-		case kEXIFLensField					: return "EXIF_Lens" ;
-			
-		case kGPSLatitudeField		      	: return "GPS_LatitudeField" ;
-		case kGPSLongitudeField		      	: return "GPS_LongitudeField" ;
-		case kGPSLatitudeRefField			: return "GPS_LatitudeRefField" ;
-		case kGPSLongitudeRefField			: return "GPS_LongitudeRefField" ;
-		case kGPSAltitudeField		      	: return "GPS_AltitudeField" ;
-			
-		case kUser1Field					: return "USER01_Field" ;
-		case kUser2Field					: return "USER02_Field" ;
-		case kUser3Field					: return "USER03_Field" ;
-		case kUser4Field					: return "USER04_Field" ;
-		case kUser5Field					: return "USER05_Field" ;
-		case kUser6Field					: return "USER06_Field" ;
-		case kUser7Field					: return "USER07_Field" ;
-		case kUser8Field					: return "USER08_Field" ;
-		case kUser9Field					: return "USER09_Field" ;
-		case kUser10Field					: return "USER10_Field" ;
-		case kUser11Field					: return "USER11_Field" ;
-		case kUser12Field					: return "USER12_Field" ;
-		case kUser13Field					: return "USER13_Field" ;
-		case kUser14Field					: return "USER14_Field" ;
-		case kUser15Field					: return "USER15_Field" ;
-		case kUser16Field					: return "USER15_Field" ;
+		case kGPSLatitudeField		      	: return kGPSLatitude;
+		case kGPSLongitudeField		      	: return kGPSLongitude;
+		case kGPSLatitudeRefField			: return kGPSLatitudeRef;
+		case kGPSLongitudeRefField			: return kGPSLongitudeRef;
+		case kGPSAltitudeField		      	: return kGPSAltitude;
+
+		case kUser01Field					: return kUserField01;
+		case kUser02Field					: return kUserField02;
+		case kUser03Field					: return kUserField03;
+		case kUser04Field					: return kUserField04;
+		case kUser05Field					: return kUserField05;
+		case kUser06Field					: return kUserField06;
+		case kUser07Field					: return kUserField07;
+		case kUser08Field					: return kUserField08;
+		case kUser09Field					: return kUserField09;
+		case kUser10Field					: return kUserField10;
+		case kUser11Field					: return kUserField11;
+		case kUser12Field					: return kUserField12;
+		case kUser13Field					: return kUserField13;
+		case kUser14Field					: return kUserField14;
+		case kUser15Field					: return kUserField15;
+		case kUser16Field					: return kUserField16;
 	}
 	
 	printf("uknown tag %#010x\r", tag); // TRCK

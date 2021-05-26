@@ -9,9 +9,22 @@
 /* Begin PBXBuildFile section */
 		2C2CBF6626556BFB006D96A4 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2C2CBF6526556BFB006D96A4 /* main.c */; };
 		2C85616026578FCC00988D91 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C85615F26578FCC00988D91 /* CoreFoundation.framework */; };
-		2CA83CE02659527300DE9E17 /* iview_read.c in Sources */ = {isa = PBXBuildFile; fileRef = 2CA83CDF2659527300DE9E17 /* iview_read.c */; };
 		2CC1210B265E0CEC00D57534 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
+		2CDF3CE6265EC73A00A31FD1 /* libIVCReader.c in Sources */ = {isa = PBXBuildFile; fileRef = 2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */; };
+		2CDF3CE7265EC73A00A31FD1 /* libIVCReader.h in Headers */ = {isa = PBXBuildFile; fileRef = 2CDF3CE5265EC73A00A31FD1 /* libIVCReader.h */; };
+		2CDF3CEA265EC9B200A31FD1 /* libIVCReader.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */; };
+		2CDF3CEC265EDCE700A31FD1 /* libIVCFields.h in Headers */ = {isa = PBXBuildFile; fileRef = 2CDF3CEB265EDCE700A31FD1 /* libIVCFields.h */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2CDF3CE8265EC8D300A31FD1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2CBF5A26556BFB006D96A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2CDF3CDA265EC6BC00A31FD1;
+			remoteInfo = IVCReader;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		2C2CBF6026556BFB006D96A4 /* CopyFiles */ = {
@@ -29,12 +42,14 @@
 		2C2CBF6226556BFB006D96A4 /* ivr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ivr; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C2CBF6526556BFB006D96A4 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		2C85615F26578FCC00988D91 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		2C856163265791A200988D91 /* iview_priv.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_priv.h; sourceTree = "<group>"; };
-		2CA83CDF2659527300DE9E17 /* iview_read.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iview_read.c; sourceTree = "<group>"; };
-		2CA83CE12659527A00DE9E17 /* iview_read.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_read.h; sourceTree = "<group>"; };
+		2C856163265791A200988D91 /* private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = private.h; sourceTree = "<group>"; };
 		2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.4.0.tbd; path = usr/lib/libiconv.2.4.0.tbd; sourceTree = SDKROOT; };
 		2CC1210C265E0CEC00D57534 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		2CC1210D265E0CEC00D57534 /* libiconv.2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.tbd; path = usr/lib/libiconv.2.tbd; sourceTree = SDKROOT; };
+		2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libIVCReader.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = libIVCReader.c; sourceTree = "<group>"; };
+		2CDF3CE5265EC73A00A31FD1 /* libIVCReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libIVCReader.h; sourceTree = "<group>"; };
+		2CDF3CEB265EDCE700A31FD1 /* libIVCFields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libIVCFields.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,8 +57,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CDF3CEA265EC9B200A31FD1 /* libIVCReader.a in Frameworks */,
 				2CC1210B265E0CEC00D57534 /* libiconv.2.4.0.tbd in Frameworks */,
 				2C85616026578FCC00988D91 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2CDF3CD9265EC6BC00A31FD1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,9 +76,8 @@
 		2C2CBF5926556BFB006D96A4 = {
 			isa = PBXGroup;
 			children = (
+				2CDF3CDF265EC6CE00A31FD1 /* libIVCReader */,
 				2C2CBF6426556BFB006D96A4 /* ivr */,
-				2C3CAF72265AD6CA0071B169 /* New Group */,
-				2CA83CBE2658C70100DE9E17 /* References (Not linked) */,
 				2C2CBF6326556BFB006D96A4 /* Products */,
 				2C85615E26578FCC00988D91 /* Frameworks */,
 			);
@@ -65,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2CBF6226556BFB006D96A4 /* ivr */,
+				2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,18 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2CBF6526556BFB006D96A4 /* main.c */,
-				2CA83CDF2659527300DE9E17 /* iview_read.c */,
-				2CA83CE12659527A00DE9E17 /* iview_read.h */,
-				2C856163265791A200988D91 /* iview_priv.h */,
 			);
-			path = ivr;
-			sourceTree = "<group>";
-		};
-		2C3CAF72265AD6CA0071B169 /* New Group */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = "New Group";
 			path = ivr;
 			sourceTree = "<group>";
 		};
@@ -99,14 +111,30 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		2CA83CBE2658C70100DE9E17 /* References (Not linked) */ = {
+		2CDF3CDF265EC6CE00A31FD1 /* libIVCReader */ = {
 			isa = PBXGroup;
 			children = (
+				2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */,
+				2CDF3CE5265EC73A00A31FD1 /* libIVCReader.h */,
+				2CDF3CEB265EDCE700A31FD1 /* libIVCFields.h */,
+				2C856163265791A200988D91 /* private.h */,
 			);
-			path = "References (Not linked)";
+			path = libIVCReader;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		2CDF3CD7265EC6BC00A31FD1 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CDF3CEC265EDCE700A31FD1 /* libIVCFields.h in Headers */,
+				2CDF3CE7265EC73A00A31FD1 /* libIVCReader.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		2C2CBF6126556BFB006D96A4 /* ivr */ = {
@@ -120,11 +148,29 @@
 			buildRules = (
 			);
 			dependencies = (
+				2CDF3CE9265EC8D300A31FD1 /* PBXTargetDependency */,
 			);
 			name = ivr;
 			productName = ivr;
 			productReference = 2C2CBF6226556BFB006D96A4 /* ivr */;
 			productType = "com.apple.product-type.tool";
+		};
+		2CDF3CDA265EC6BC00A31FD1 /* IVCReader */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2CDF3CDE265EC6BC00A31FD1 /* Build configuration list for PBXNativeTarget "IVCReader" */;
+			buildPhases = (
+				2CDF3CD7265EC6BC00A31FD1 /* Headers */,
+				2CDF3CD8265EC6BC00A31FD1 /* Sources */,
+				2CDF3CD9265EC6BC00A31FD1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = IVCReader;
+			productName = IVCReader;
+			productReference = 2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
 
@@ -135,6 +181,9 @@
 				LastUpgradeCheck = 1250;
 				TargetAttributes = {
 					2C2CBF6126556BFB006D96A4 = {
+						CreatedOnToolsVersion = 12.5;
+					};
+					2CDF3CDA265EC6BC00A31FD1 = {
 						CreatedOnToolsVersion = 12.5;
 					};
 				};
@@ -153,6 +202,7 @@
 			projectRoot = "";
 			targets = (
 				2C2CBF6126556BFB006D96A4 /* ivr */,
+				2CDF3CDA265EC6BC00A31FD1 /* IVCReader */,
 			);
 		};
 /* End PBXProject section */
@@ -162,12 +212,27 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2CA83CE02659527300DE9E17 /* iview_read.c in Sources */,
 				2C2CBF6626556BFB006D96A4 /* main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2CDF3CD8265EC6BC00A31FD1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CDF3CE6265EC73A00A31FD1 /* libIVCReader.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2CDF3CE9265EC8D300A31FD1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2CDF3CDA265EC6BC00A31FD1 /* IVCReader */;
+			targetProxy = 2CDF3CE8265EC8D300A31FD1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2C2CBF6726556BFB006D96A4 /* Debug */ = {
@@ -301,6 +366,28 @@
 			};
 			name = Release;
 		};
+		2CDF3CDC265EC6BC00A31FD1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7V3CUZQKCG;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		2CDF3CDD265EC6BC00A31FD1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7V3CUZQKCG;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -318,6 +405,15 @@
 			buildConfigurations = (
 				2C2CBF6A26556BFB006D96A4 /* Debug */,
 				2C2CBF6B26556BFB006D96A4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2CDF3CDE265EC6BC00A31FD1 /* Build configuration list for PBXNativeTarget "IVCReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2CDF3CDC265EC6BC00A31FD1 /* Debug */,
+				2CDF3CDD265EC6BC00A31FD1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

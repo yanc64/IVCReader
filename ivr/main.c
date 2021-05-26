@@ -6,7 +6,7 @@
 //
 
 #include <stdio.h>
-#include "iview_read.h"
+#include "libIVCReader.h"
 
 void logstr(const char *t, const char *s) { printf("\t%-30s = %s\r", t, s?s:"-"); }
 void lognum(const char *t, const long *l) { if( l ) printf("\t%-30s = %ld\r", t, *l); else printf("\t%-30s = -\r", t); }
@@ -34,8 +34,8 @@ int main(int argc, const char * argv[])
 {
 	SInt16 status;
 	SInt16 total;
-	char *filename = "/Users/yan/Downloads/SAMPLE-AAA/_Hifi.ivc";
-//	char *filename = "/Users/yan/Downloads/_Travels.ivc";
+//	char *filename = "/Users/yan/Downloads/SAMPLE-AAA/_Hifi.ivc";
+	char *filename = "/Users/yan/Downloads/_Travels.ivc";
 
 	IVCOpen(filename, &total, &status);
 	IVCReport(_dataFeedProc, &status);
