@@ -5,6 +5,7 @@
 //  Created by Yannis Calotychos on 19/5/21.
 //
 
+#include <iconv.h>
 #include "iview_read.h"
 #include "iview_defs.h"
 
@@ -17,15 +18,12 @@ static UInt32		gFileCount;
 static UInt32		gCurrentChuckOffset;
 static UInt32 		gUserFieldCount = 0;
 
-#define kMaxOutStringLength	10480
-static char			gOutString[kMaxOutStringLength];
-
 static FILE *		gfp;
 static DataFeed 	outFeed;
 
 enum {
 	text_outString, // null terminated
-	text_utf8 = 100, text_ascii = 101
+	text_utf16 = 102, text_utf8 = 100, text_ascii = 101
 };
 
 
@@ -37,9 +35,10 @@ enum {
 // Chunks
 static OSErr 		ReadCatalogChunks(FILE *fp);
 static OSErr 		ReadCatalogExtraAsPtr(FILE *fp, Ptr *p, UInt32 databytes);
-static void 		ParseMorsels(const char * masterData, UInt32 masterSize);
-static char *		unflattenMorselProc(const char *path, const void *inData, UInt32 inSize);
-static char *		unflattenUFListProc(const char *path, const void *data, const UInt32 size);
+
+static void 		ParseMorsels(char * masterData, UInt32 masterSize);
+static char *		unflattenMorselProc(char *path, void *data, UInt32 dataSize);
+static char *		unflattenUFieldProc(char *path, void *data, UInt32 dataSize);
 
 // File Cells
 static OSErr 		ReadFolders(FILE *fp, char *path);
@@ -56,10 +55,12 @@ static void 		ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 len);
 static OSErr 		myfread(FILE *fp, UInt32 *len, void *val);
 static OSErr 		myfseek(FILE *fp, int ref, SInt32 len);
 
-static char *		UTF16_TO_UTF8(UInt8 *buf, UInt32 bufLen);
+static char *		UTF8_FROM_UTF8(UInt8 *utf16, size_t utf16len);
+static char *		UTF8_FROM_UTF16(UInt8 *buf, size_t bufLen);
+static char *		UTF8_FROM_ASCII(UInt8 *utf16, size_t utf16len);
 
-static void 		UnflattenStart(const char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
-static UInt32		UnflattenData(const char* path, const char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
+static void 		UnflattenStart(char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
+static UInt32		UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
 
 static const char *	fieldName(UInt32 tag);
 
@@ -148,14 +149,14 @@ void IVCClose(void)
 }
 
 ////
-void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType,
-			   void *data, const UInt32 size)
+void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType, void *data, const UInt32 size)
 {
 	UInt32 *	uint32	= (UInt32 *)data;
 	SInt32 *	sint32	= (SInt32 *)data;
 	SInt16 *	sint16	= (SInt16 *)data;
-	long 		l;
+	char *cstr;
 
+	
 	if( outFeed )
 		switch( fieldType )
 		{
@@ -163,14 +164,24 @@ void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType,
 				outFeed(uid, fieldName, string_utf8, data);
 				break;
 				
-			case text_utf8:
-			case text_ascii:
-				l = size >= kMaxOutStringLength - 1 ? kMaxOutStringLength - 1: size;
-				memcpy(gOutString, data, l);
-				gOutString[l] = 0;
-				outFeed(uid, fieldName, string_utf8, gOutString);
+			case text_utf16:
+				cstr = UTF8_FROM_UTF16(data, size);
+				outFeed(uid, fieldName, string_utf8, cstr);
+				free(cstr);
 				break;
 
+			case text_ascii:
+				cstr = UTF8_FROM_ASCII(data, size);
+				outFeed(uid, fieldName, string_utf8, cstr);
+				free(cstr);
+				break;
+
+			case text_utf8:
+				cstr = UTF8_FROM_UTF8(data, size);
+				outFeed(uid, fieldName, string_utf8, cstr);
+				free(cstr);
+				break;
+				
 			case number_sint16:
 				*sint16 = EndianS16_BtoN(*sint16);
 				outFeed(uid, fieldName, fieldType, data);
@@ -205,6 +216,61 @@ void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType,
 #pragma mark -
 
 ////
+//static OSErr ReadCatalogChunkOffset(FILE *fp)
+//{
+//	OSErr		myErr = noErr;
+//	OSType		chunkTag;
+//	char *		chunkData;
+//	UInt32		chunkBytes;
+//	UInt32		offset;
+//	UInt32		bytes;
+//	CellInfo *	cells;
+//
+//
+//	UInt32 coffset[4];
+//	UInt32 clength[4];
+//
+//
+//	// go to the contents offset
+//	bytes = 4;
+//	if((myErr = myfseek(fp, SEEK_END, -4)) ||
+//	   (myErr = myfread(fp, &bytes, &offset)) ||
+//	   (myErr = myfseek(fp, SEEK_SET, EndianU32_BtoN(offset))))
+//		return myErr;
+//
+//	// read the offsets all sets until we hit chunkTag = kCatalogFileFormat or an error
+//	while( !myErr )
+//	{
+//		bytes = 4;
+//		if( (myErr = myfread(fp, &bytes, &chunkTag)) )
+//			break;
+//		chunkTag = EndianU32_BtoN(chunkTag);
+//
+//		// Detect end of extras
+//		if( chunkTag == kCatalogFileFormat )
+//			break;
+//
+//		// Get size of this xtra block
+//		if( (myErr = myfread(fp, &bytes, &chunkBytes)) )
+//			break;
+//		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
+//
+////		printf("\r--- %s\r", FourCC2Str(chunkTag));
+//		gCurrentChuckOffset = (UInt32) ftell(fp);
+//
+//		if     ( chunkTag == kCatalogUserFieldsTag ) { coffset[0] = gCurrentChuckOffset; clength[0] = chunkBytes; }
+//		else if( chunkTag == kCatalogFSMTag        ) { coffset[1] = gCurrentChuckOffset; clength[1] = chunkBytes; }
+//		else if( chunkTag == kCatalogMorselsTag    ) { coffset[2] = gCurrentChuckOffset; clength[2] = chunkBytes; }
+//		else if( chunkTag == kCatalogCellListTag   ) { coffset[3] = gCurrentChuckOffset; clength[3] = chunkBytes; }
+//
+//		myErr = myfseek(fp, SEEK_CUR, chunkBytes);
+//	}
+//
+//	return myErr;
+//}
+
+
+////
 static OSErr ReadCatalogChunks(FILE *fp)
 {
 	OSErr		myErr = noErr;
@@ -213,12 +279,6 @@ static OSErr ReadCatalogChunks(FILE *fp)
 	UInt32		chunkBytes;
 	UInt32		offset;
 	UInt32		bytes;
-	CellInfo *	cells;
-
-	const UInt32 kCatalogCellListTag 	= 'CELL';
-	const UInt32 kCatalogMorselsTag 	= 'CMRS';
-	const UInt32 kCatalogUserFieldsTag 	= 'USF3';
-	const UInt32 kCatalogFSMTag 		= 'FSM!';
 
 	// go to the contents offset
 	bytes = 4;
@@ -253,7 +313,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				myErr = ReadCatalogExtraAsPtr(fp, &chunkData, chunkBytes);
 				if( !myErr )
 				{
-					UnflattenStart(chunkData, chunkBytes, unflattenUFListProc);
+					UnflattenStart(chunkData, chunkBytes, unflattenUFieldProc);
 					free(chunkData);
 				}
 				break;
@@ -275,22 +335,21 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				break;
 				
 			case kCatalogCellListTag:
-				cells = malloc(chunkBytes);
-				myErr = myfread(fp, &chunkBytes, cells);
+				myErr = ReadCatalogExtraAsPtr(fp, &chunkData, chunkBytes);
 				if( !myErr )
 				{
 					if( gFileCount != chunkBytes/sizeof(CellInfo) )
 						myErr = wrongFileCountErr;
 					else
-						myErr = ReadFileCells(fp, cells, gFileCount);
+						myErr = ReadFileCells(fp, (CellInfo *)chunkData, gFileCount);
 
 					if( !myErr )
 						myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
+					free(chunkData);
 				}
 				break;
 				
 			default:
-				// printf("\tignored\r");
 				myErr = myfseek(fp, SEEK_CUR, chunkBytes);
 				break;
 		}
@@ -316,7 +375,7 @@ static OSErr ReadCatalogExtraAsPtr(FILE *fp, Ptr *p, UInt32 databytes)
 }
 
 ////
-static void ParseMorsels(const char *masterData, UInt32 masterSize)
+static void ParseMorsels(char *masterData, UInt32 masterSize)
 {
 	UInt32	fieldTag;
 	UInt32	bytes;
@@ -355,7 +414,7 @@ static void ParseMorsels(const char *masterData, UInt32 masterSize)
 }
 
 ////
-static char *unflattenMorselProc(const char *path, const void *inData, UInt32 inSize)
+static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 {
 	UInt32 		nameBytes;
 	UInt32		uidCount;		// number of item unique ids
@@ -386,29 +445,28 @@ static char *unflattenMorselProc(const char *path, const void *inData, UInt32 in
 	memcpy(&nameBytes, p, 4);
 	nameBytes = EndianU32_BtoN(nameBytes);
 	p+=4;
-	char *name = UTF16_TO_UTF8((UInt8 *)p, nameBytes);
+	char *name = UTF8_FROM_UTF16((UInt8 *)p, nameBytes);
 	
 	// dataFeed pathname for uids
 	if( uidCount )
 	{
+		char pathString[10480];
+		sprintf(pathString, "%s/%s", path, name);
+
 		char *fieldName;
-		sprintf(gOutString, "%s/%s", path, name);
 		fieldName = "PATH_Sets";
 			
 		for(UInt32 i=0; i<uidCount; i++)
-			dataFeed(EndianU32_BtoN(uids[i]), fieldName, text_outString, gOutString, 1);
+			dataFeed(EndianU32_BtoN(uids[i]), fieldName, text_outString, pathString, 0);
 	}
 	
 	return name;
 }
 
 ////
-static char *unflattenUFListProc(const char *path, const void *data, const UInt32 dataBytes)
+static char *unflattenUFieldProc(char *path, void *inData, UInt32 inSize)
 {
-	char *userField = UTF16_TO_UTF8((UInt8 *)data, dataBytes);
-	dataFeed(gUserFieldCount++, "DEF_UserField", text_outString, userField, 1);
-	free(userField);
-
+	dataFeed(gUserFieldCount++, "DEF_UserField", text_utf16, inData, inSize);
 	return nil;
 }
 
@@ -471,7 +529,7 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		bytes = fh.modern_name_length;
 		UInt8 *nameBuf = malloc(bytes);
 		myfread(fp, &bytes, nameBuf);
-		folderName = UTF16_TO_UTF8(nameBuf, bytes);
+		folderName = UTF8_FROM_UTF16(nameBuf, bytes);
 		free(nameBuf);
 	}
 
@@ -544,14 +602,14 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 			if((myErr = myfread(fp, &bytes, fileNameBuffer)))
 				goto bail;
 			
-			char *fileName = UTF16_TO_UTF8((UInt8*)fileNameBuffer, bytes);
+			char *fileName = UTF8_FROM_UTF16((UInt8*)fileNameBuffer, bytes);
 			char filePath[10280];
 			strcpy(filePath, path);
 			strcat(filePath, "/");
 			strcat(filePath, fileName);
 			free(fileName);
 
-			dataFeed(fileUids[i], "FILE_Path", text_utf8, filePath, (UInt32) strlen(filePath));
+			dataFeed(fileUids[i], "FILE_Path", text_outString, filePath, 0);
 		}
 	}
 
@@ -825,7 +883,7 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 #pragma mark - Generic Linked List
 
 ////
-static void UnflattenStart(const char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc)
+static void UnflattenStart(char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc)
 {
 	if( flatSize && *flatData == kListStart )
 	{
@@ -839,7 +897,7 @@ static void UnflattenStart(const char *flatData, UInt32 flatSize, ListUnflattenP
 
 
 ////
-static UInt32 UnflattenData(const char* path, const char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc)
+static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc)
 {
 	Boolean	done = false;
 	UInt32	bytes = 0;
@@ -912,7 +970,7 @@ static UInt32 UnflattenData(const char* path, const char* flatData, UInt32 flatS
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - Low Level
+#pragma mark - File IO
 
 ////
 static OSErr myfread(FILE *fp, UInt32 *len, void *val)
@@ -930,17 +988,59 @@ static OSErr myfseek(FILE *fp, int ref, SInt32 len)
 	return err;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark - Strings
+
 ////
-static char *UTF16_TO_UTF8(UInt8 *buf, UInt32 bufLen)
+static char *UTF8_FROM_UTF8(UInt8 *srcBuf, size_t srcLen)
 {
-	char *name = calloc(bufLen+2, 1);
-	CFStringRef str = CFStringCreateWithBytesNoCopy(NULL, buf, bufLen, kCFStringEncodingUTF16, false, NULL);
-	CFStringGetCString(str, name, bufLen, kCFStringEncodingUTF8);
-	return name;
+	char * dstBuf = calloc(srcLen + 1, 1);
+	memcpy(dstBuf, srcBuf, srcLen);
+	return dstBuf;
 }
 
+////
+static char *UTF8_FROM_UTF16(UInt8 *srcBuf, size_t srcLen)
+{
+	size_t dstLen = srcLen;
+	char * dstBuf = calloc(dstLen + 1, 1);
+	
+	char *srcPtr = (char*) srcBuf;
+	char *dstPtr = (char*) dstBuf;
+	
+	iconv_t cvt = iconv_open("UTF-8", "UTF-16");
+	iconv(cvt, &srcPtr, &srcLen, &dstPtr, &dstLen);
+	iconv_close(cvt);
+	
+	return dstBuf;
+}
+
+////
+static char *UTF8_FROM_ASCII(UInt8 *srcBuf, size_t srcLen)
+{
+	size_t tstLen = srcLen;
+	
+	size_t dstLen = 2 * srcLen;
+	char * dstBuf = calloc(dstLen + 1, 1);
+	
+	char *srcPtr = (char*) srcBuf;
+	char *dstPtr = (char*) dstBuf;
+	
+	iconv_t cvt = iconv_open("UTF-8", "MACROMAN");
+	iconv(cvt, &srcPtr, &srcLen, &dstPtr, &dstLen);
+	iconv_close(cvt);
+	
+	if( tstLen != dstLen )
+	{
+		printf("%s ascii to utf8 dif", dstBuf);
+	}
+	
+	return dstBuf;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - Labels
+#pragma mark - Field Names
 
 ////
 static const char *fieldName(UInt32 tag)
@@ -1036,6 +1136,6 @@ static const char *fieldName(UInt32 tag)
 		case kUser16Field					: return "USER15_Field" ;
 	}
 	
-	printf("uknown tag %#010x\r", tag);
+	printf("uknown tag %#010x\r", tag); // TRCK
 	return "<?>";
 }

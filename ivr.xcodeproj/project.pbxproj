@@ -10,6 +10,7 @@
 		2C2CBF6626556BFB006D96A4 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2C2CBF6526556BFB006D96A4 /* main.c */; };
 		2C85616026578FCC00988D91 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C85615F26578FCC00988D91 /* CoreFoundation.framework */; };
 		2CA83CE02659527300DE9E17 /* iview_read.c in Sources */ = {isa = PBXBuildFile; fileRef = 2CA83CDF2659527300DE9E17 /* iview_read.c */; };
+		2CC1210B265E0CEC00D57534 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,6 +33,9 @@
 		2C856163265791A200988D91 /* iview_defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_defs.h; sourceTree = "<group>"; };
 		2CA83CDF2659527300DE9E17 /* iview_read.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iview_read.c; sourceTree = "<group>"; };
 		2CA83CE12659527A00DE9E17 /* iview_read.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_read.h; sourceTree = "<group>"; };
+		2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.4.0.tbd; path = usr/lib/libiconv.2.4.0.tbd; sourceTree = SDKROOT; };
+		2CC1210C265E0CEC00D57534 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
+		2CC1210D265E0CEC00D57534 /* libiconv.2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.tbd; path = usr/lib/libiconv.2.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CC1210B265E0CEC00D57534 /* libiconv.2.4.0.tbd in Frameworks */,
 				2C85616026578FCC00988D91 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -88,6 +93,9 @@
 		2C85615E26578FCC00988D91 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2CC1210D265E0CEC00D57534 /* libiconv.2.tbd */,
+				2CC1210C265E0CEC00D57534 /* libiconv.tbd */,
+				2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */,
 				2C85615F26578FCC00988D91 /* CoreFoundation.framework */,
 			);
 			name = Frameworks;
