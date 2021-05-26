@@ -8,13 +8,14 @@
 #include "iview_read.h"
 #include "iview_priv.h"
 
+// TODO: Make Lib
 // TODO: flags to label / rating
-// TODO: separate hierarchycal keywords from sets
 
 // Local cariables
 static UInt32		gFileCount;
 static UInt32		gCurrentChuckOffset;
 static UInt32 		gUserFieldCount = 0;
+static bool 		gMorselIsHK = false;
 
 static FILE *		gfp;
 static DataFeed 	outFeed;
@@ -343,7 +344,7 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 		sprintf(pathString, "%s/%s", path, name);
 
 		char *fieldName;
-		fieldName = "PATH_Sets";
+		fieldName = gMorselIsHK ? "PATH_KeywordTree":"PATH_SetTree";
 			
 		for(UInt32 i=0; i<uidCount; i++)
 			dataFeed(EndianU32_BtoN(uids[i]), fieldName, text_outString, pathString, 0);
@@ -788,14 +789,14 @@ static void UnflattenStart(char *flatData, UInt32 flatSize, ListUnflattenProc un
 		++flatData;
 		--flatSize;
 		
-		// bytes =
-		UnflattenData("", flatData, flatSize, unflattenProc);
+		gMorselIsHK = false;
+		UnflattenData("", flatData, flatSize, true, unflattenProc);
 	}
 }
 
 
 ////
-static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc)
+static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, bool root, ListUnflattenProc unflattenProc)
 {
 	Boolean	done = false;
 	UInt32	bytes = 0;
@@ -818,7 +819,7 @@ static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnf
 		switch(tag)
 		{
 			case kListStart:
-				bytes = UnflattenData(pp, flatData, flatSize, unflattenProc);
+				bytes = UnflattenData(pp, flatData, flatSize, false, unflattenProc);
 				flatData += bytes;
 				flatSize -= bytes;
 				break;
@@ -843,9 +844,16 @@ static UInt32 UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnf
 						char *clientDataBuff = unflattenProc(pp, flatData, clientDataSize);
 						if( clientDataBuff )
 						{
-							ll = (UInt32) strlen(pp);
-							strcat(pp, "/");
-							strcat(pp, clientDataBuff);
+							if( root && !strcmp(clientDataBuff, "@KeywordsSet") )
+							{
+								gMorselIsHK = true;
+							}
+							else
+							{
+								ll = (UInt32) strlen(pp);
+								strcat(pp, "/");
+								strcat(pp, clientDataBuff);
+							}
 							free(clientDataBuff);
 						}
 					}
