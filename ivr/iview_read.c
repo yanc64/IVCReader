@@ -5,13 +5,11 @@
 //  Created by Yannis Calotychos on 19/5/21.
 //
 
-#include <iconv.h>
 #include "iview_read.h"
-#include "iview_defs.h"
+#include "iview_priv.h"
 
 // TODO: flags to label / rating
 // TODO: separate hierarchycal keywords from sets
-// TODO: remove CFString to make it cross platform
 
 // Local cariables
 static UInt32		gFileCount;
@@ -25,44 +23,6 @@ enum {
 	text_outString, // null terminated
 	text_utf16 = 102, text_utf8 = 100, text_ascii = 101
 };
-
-
-
-//////////////////////////////
-// Forward Declarations		//
-//////////////////////////////
-
-// Chunks
-static OSErr 		ReadCatalogChunks(FILE *fp);
-static OSErr 		ReadCatalogExtraAsPtr(FILE *fp, Ptr *p, UInt32 databytes);
-
-static void 		ParseMorsels(char * masterData, UInt32 masterSize);
-static char *		unflattenMorselProc(char *path, void *data, UInt32 dataSize);
-static char *		unflattenUFieldProc(char *path, void *data, UInt32 dataSize);
-
-// File Cells
-static OSErr 		ReadFolders(FILE *fp, char *path);
-
-// File Cells
-static OSErr 		ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total);
-static OSErr 		ReadFileBlocks(FILE *fp, CellInfo *ci);
-static void 		ParseBlockInfo(const UInt32 uid, ItemInfo *in);
-static void 		ParseBlockText(const UInt32 uid, const Ptr buf, const UInt32 len, OSType tag);
-static void 		ParseBlockIPTC(const UInt32 uid, const Ptr buf, const long len);
-static void 		ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 len);
-
-// Low Level
-static OSErr 		myfread(FILE *fp, UInt32 *len, void *val);
-static OSErr 		myfseek(FILE *fp, int ref, SInt32 len);
-
-static char *		UTF8_FROM_UTF8(UInt8 *utf16, size_t utf16len);
-static char *		UTF8_FROM_UTF16(UInt8 *buf, size_t bufLen);
-static char *		UTF8_FROM_ASCII(UInt8 *utf16, size_t utf16len);
-
-static void 		UnflattenStart(char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
-static UInt32		UnflattenData(char* path, char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
-
-static const char *	fieldName(UInt32 tag);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,61 +176,6 @@ void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType, vo
 #pragma mark -
 
 ////
-//static OSErr ReadCatalogChunkOffset(FILE *fp)
-//{
-//	OSErr		myErr = noErr;
-//	OSType		chunkTag;
-//	char *		chunkData;
-//	UInt32		chunkBytes;
-//	UInt32		offset;
-//	UInt32		bytes;
-//	CellInfo *	cells;
-//
-//
-//	UInt32 coffset[4];
-//	UInt32 clength[4];
-//
-//
-//	// go to the contents offset
-//	bytes = 4;
-//	if((myErr = myfseek(fp, SEEK_END, -4)) ||
-//	   (myErr = myfread(fp, &bytes, &offset)) ||
-//	   (myErr = myfseek(fp, SEEK_SET, EndianU32_BtoN(offset))))
-//		return myErr;
-//
-//	// read the offsets all sets until we hit chunkTag = kCatalogFileFormat or an error
-//	while( !myErr )
-//	{
-//		bytes = 4;
-//		if( (myErr = myfread(fp, &bytes, &chunkTag)) )
-//			break;
-//		chunkTag = EndianU32_BtoN(chunkTag);
-//
-//		// Detect end of extras
-//		if( chunkTag == kCatalogFileFormat )
-//			break;
-//
-//		// Get size of this xtra block
-//		if( (myErr = myfread(fp, &bytes, &chunkBytes)) )
-//			break;
-//		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
-//
-////		printf("\r--- %s\r", FourCC2Str(chunkTag));
-//		gCurrentChuckOffset = (UInt32) ftell(fp);
-//
-//		if     ( chunkTag == kCatalogUserFieldsTag ) { coffset[0] = gCurrentChuckOffset; clength[0] = chunkBytes; }
-//		else if( chunkTag == kCatalogFSMTag        ) { coffset[1] = gCurrentChuckOffset; clength[1] = chunkBytes; }
-//		else if( chunkTag == kCatalogMorselsTag    ) { coffset[2] = gCurrentChuckOffset; clength[2] = chunkBytes; }
-//		else if( chunkTag == kCatalogCellListTag   ) { coffset[3] = gCurrentChuckOffset; clength[3] = chunkBytes; }
-//
-//		myErr = myfseek(fp, SEEK_CUR, chunkBytes);
-//	}
-//
-//	return myErr;
-//}
-
-
-////
 static OSErr ReadCatalogChunks(FILE *fp)
 {
 	OSErr		myErr = noErr;
@@ -310,7 +215,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 		switch( chunkTag )
 		{
 			case kCatalogUserFieldsTag:
-				myErr = ReadCatalogExtraAsPtr(fp, &chunkData, chunkBytes);
+				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
 				if( !myErr )
 				{
 					UnflattenStart(chunkData, chunkBytes, unflattenUFieldProc);
@@ -320,7 +225,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				
 			case kCatalogMorselsTag:
 				// This contains all visible morsels + keywords tree + sets tree
-				myErr = ReadCatalogExtraAsPtr(fp, &chunkData, chunkBytes);
+				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
 				if( !myErr )
 				{
 					ParseMorsels(chunkData, chunkBytes);
@@ -335,7 +240,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				break;
 				
 			case kCatalogCellListTag:
-				myErr = ReadCatalogExtraAsPtr(fp, &chunkData, chunkBytes);
+				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
 				if( !myErr )
 				{
 					if( gFileCount != chunkBytes/sizeof(CellInfo) )
@@ -353,22 +258,6 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				myErr = myfseek(fp, SEEK_CUR, chunkBytes);
 				break;
 		}
-	}
-	
-	return myErr;
-}
-
-////
-static OSErr ReadCatalogExtraAsPtr(FILE *fp, Ptr *p, UInt32 databytes)
-{
-	OSErr myErr;
-	
-	*p = (Ptr)malloc(databytes);
-	if( !*p )
-		myErr = memoryErr;
-	else
-	{
-		myErr = myfread(fp, &databytes, *p);
 	}
 	
 	return myErr;
@@ -477,15 +366,16 @@ static char *unflattenUFieldProc(char *path, void *inData, UInt32 inSize)
 static OSErr ReadFolders(FILE *fp, char *inpath)
 {
 	char *folderName = nil;
+	UInt32 *fileUids = nil;
+	UInt32 *nameLengths = nil;
+	UInt32 *subFolderOffsets = nil;
+
+
 	char path[10240];
 	
 	data_chunk_header dch;
 	folder_structure_header	fh;
 	UInt32 bytes;
-	
-	UInt32 *fileUids = nil;
-	UInt32 *nameLengths = nil;
-	UInt32 *subFolderOffsets = nil;
 	
 	OSErr myErr;
 	
@@ -598,8 +488,10 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		for(UInt32 i=0; i < fh.num_items; i++)
 		{
 			bytes = EndianU32_BtoN(nameLengths[i]);
-			char *fileNameBuffer = malloc(bytes);
-			if((myErr = myfread(fp, &bytes, fileNameBuffer)))
+			
+			char *fileNameBuffer = nil;
+			myErr = ReadAsPtr(fp, &fileNameBuffer, bytes);
+			if( myErr )
 				goto bail;
 			
 			char *fileName = UTF8_FROM_UTF16((UInt8*)fileNameBuffer, bytes);
@@ -607,7 +499,9 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 			strcpy(filePath, path);
 			strcat(filePath, "/");
 			strcat(filePath, fileName);
+
 			free(fileName);
+			free(fileNameBuffer);
 
 			dataFeed(fileUids[i], "FILE_Path", text_outString, filePath, 0);
 		}
@@ -633,8 +527,11 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 
 
 bail:
-	if( folderName )
-		free(folderName);
+	if( folderName )		free(folderName);
+	if( fileUids )			free(fileUids);
+	if( nameLengths )		free(nameLengths);
+	if( subFolderOffsets)	free(subFolderOffsets);
+	
 	return myErr;
 }
 
@@ -660,14 +557,9 @@ static OSErr ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total)
 ////
 static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 {
-	UInt32		bytes;
 	OSErr		myErr = noErr;
+	UInt32		bytes;
 	UInt32 		offset;
-	void *		bufIptc; 			// iptc block read buffer
-	void *		bufMeta; 			// meta block read buffer
-	void *		bufUrlf;			// urlf read buffer
-									//	void *		bufPict; 			// pict read buffer
-									//	void *		bufTalk;			// talk read buffer
 	
 	offset = ci->catoffset;
 	RecordCache cache = {0};
@@ -686,35 +578,41 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 
 	///////
 	// Iptc
-	if((bytes = cache.info.iptcSize) > 0 &&
-	   (myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize)) == noErr )
+	if( cache.info.iptcSize )
 	{
-		bufIptc = malloc(bytes);
-		if( bufIptc && !myfread(fp, &bytes, bufIptc) )
-			ParseBlockIPTC(ci->uniqueID, (Ptr)bufIptc, bytes);
+		Ptr data = nil;
+		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize)) ||
+		   (myErr = ReadAsPtr(fp, &data, cache.info.iptcSize)))
+			return myErr;
+		ParseBlockIPTC(ci->uniqueID, data, cache.info.iptcSize);
+		free(data);
 	}
 	
 	///////
 	// Meta
-	if((bytes = cache.info.metaSize) > 0 &&
-	   (myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize + cache.info.urlfSize)) == noErr )
+	if( cache.info.metaSize )
 	{
-		bufMeta = malloc(bytes);
-		if( bufMeta && !myfread(fp, &bytes, bufMeta) )
-			ParseBlockEXIF(ci->uniqueID, (Ptr)bufMeta, bytes);
+		Ptr data = nil;
+		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize + cache.info.urlfSize)) ||
+		   (myErr = ReadAsPtr(fp, &data, cache.info.metaSize)))
+			return myErr;
+		ParseBlockEXIF(ci->uniqueID, data, cache.info.metaSize);
+		free(data);
 	}
 	
 	///////
 	// Surl
-	if((bytes = cache.info.urlfSize) > 0 &&
-	   (myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) == noErr )
+	if( cache.info.urlfSize )
 	{
-		bufUrlf = malloc(bytes);
-		if( bufUrlf && !myfread(fp, &bytes, bufUrlf) )
-			ParseBlockText(ci->uniqueID, (Ptr)bufUrlf, bytes, kSourceURLField);
+		Ptr data = nil;
+		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
+		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
+			return myErr;
+		ParseBlockText(ci->uniqueID, data, bytes, kSourceURLField);
+		free(data);
 	}
 	
-	return noErr;
+	return myErr;
 }
 
 ////
@@ -988,6 +886,30 @@ static OSErr myfseek(FILE *fp, int ref, SInt32 len)
 	return err;
 }
 
+////
+static OSErr ReadAsPtr(FILE *fp, Ptr *p, UInt32 databytes)
+{
+	OSErr myErr;
+	
+	*p = (Ptr)malloc(databytes);
+	if( !*p )
+	{
+		myErr = memoryErr;
+		goto bail;
+	}
+
+	myErr = myfread(fp, &databytes, *p);
+	if( myErr )
+	{
+		free(*p);
+		*p = nil;
+	}
+
+bail:
+	return myErr;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark - Strings
 
@@ -1018,7 +940,7 @@ static char *UTF8_FROM_UTF16(UInt8 *srcBuf, size_t srcLen)
 ////
 static char *UTF8_FROM_ASCII(UInt8 *srcBuf, size_t srcLen)
 {
-	size_t tstLen = srcLen;
+	// size_t tstLen = srcLen;
 	
 	size_t dstLen = 2 * srcLen;
 	char * dstBuf = calloc(dstLen + 1, 1);
@@ -1026,14 +948,14 @@ static char *UTF8_FROM_ASCII(UInt8 *srcBuf, size_t srcLen)
 	char *srcPtr = (char*) srcBuf;
 	char *dstPtr = (char*) dstBuf;
 	
-	iconv_t cvt = iconv_open("UTF-8", "MACROMAN");
+	// Use Mac Roman instead of ascii
+	// Test string "Adobe Photoshop® 5.2", the '®' character is lost when using ASCII
+	iconv_t cvt = iconv_open("UTF-8", "MACROMAN"); // ASCII");
 	iconv(cvt, &srcPtr, &srcLen, &dstPtr, &dstLen);
 	iconv_close(cvt);
 	
-	if( tstLen != dstLen )
-	{
-		printf("%s ascii to utf8 dif", dstBuf);
-	}
+	// if( tstLen != dstLen )
+	//	printf("[%s]", dstBuf);
 	
 	return dstBuf;
 }

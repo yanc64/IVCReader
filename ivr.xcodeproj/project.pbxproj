@@ -30,7 +30,7 @@
 		2C2CBF6526556BFB006D96A4 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		2C3CAF73265AD6D90071B169 /* xmlIO.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xmlIO.c; path = "../../../iView_Develop/iView_Dev/iView LIB/ICL/source_lib/xmlIO.c"; sourceTree = "<group>"; };
 		2C85615F26578FCC00988D91 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		2C856163265791A200988D91 /* iview_defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_defs.h; sourceTree = "<group>"; };
+		2C856163265791A200988D91 /* iview_priv.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_priv.h; sourceTree = "<group>"; };
 		2CA83CDF2659527300DE9E17 /* iview_read.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iview_read.c; sourceTree = "<group>"; };
 		2CA83CE12659527A00DE9E17 /* iview_read.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iview_read.h; sourceTree = "<group>"; };
 		2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.4.0.tbd; path = usr/lib/libiconv.2.4.0.tbd; sourceTree = SDKROOT; };
@@ -76,7 +76,7 @@
 				2C2CBF6526556BFB006D96A4 /* main.c */,
 				2CA83CDF2659527300DE9E17 /* iview_read.c */,
 				2CA83CE12659527A00DE9E17 /* iview_read.h */,
-				2C856163265791A200988D91 /* iview_defs.h */,
+				2C856163265791A200988D91 /* iview_priv.h */,
 			);
 			path = ivr;
 			sourceTree = "<group>";
