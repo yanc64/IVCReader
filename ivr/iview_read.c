@@ -5,19 +5,30 @@
 //  Created by Yannis Calotychos on 19/5/21.
 //
 
-//#include <CoreServices/CoreServices.h>
-//#include <CarbonCore/CarbonCore.h>
-
 #include "iview_read.h"
 #include "iview_defs.h"
+
+// TODO: flags to label / rating
+// TODO: separate hierarchycal keywords from sets
+// TODO: remove CFString to make it cross platform
 
 // Local cariables
 static UInt32		gFileCount;
 static UInt32		gCurrentChuckOffset;
 static UInt32 		gUserFieldCount = 0;
 
+#define kMaxOutStringLength	10480
+static char			gOutString[kMaxOutStringLength];
+
 static FILE *		gfp;
-static DataFeed 	dataFeed;
+static DataFeed 	outFeed;
+
+enum {
+	text_outString, // null terminated
+	text_utf8 = 100, text_ascii = 101
+};
+
+
 
 //////////////////////////////
 // Forward Declarations		//
@@ -44,9 +55,9 @@ static void 		ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 len);
 // Low Level
 static OSErr 		myfread(FILE *fp, UInt32 *len, void *val);
 static OSErr 		myfseek(FILE *fp, int ref, SInt32 len);
-static void 		memoryToUTF8String(UInt8 *buf, UInt32 bufLen, char *cs, UInt32 maxOutLen);
-static char *		memToUTF8String(const UInt8 *buf, const UInt32 bufLen);
-static void 		blockMoveData(void *src, void *dst, UInt32 len);
+
+static char *		UTF16_TO_UTF8(UInt8 *buf, UInt32 bufLen);
+
 static void 		UnflattenStart(const char *flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
 static UInt32		UnflattenData(const char* path, const char* flatData, UInt32 flatSize, ListUnflattenProc unflattenProc);
 
@@ -121,7 +132,7 @@ bail:
 ////
 void IVCReport(DataFeed inDataFeed, SInt16 *outStatus)
 {
-	dataFeed = inDataFeed;
+	outFeed = inDataFeed;
 	
 	OSErr myErr = gfp ? ReadCatalogChunks(gfp): parsingCantStartErr;
 	if( outStatus )
@@ -134,6 +145,59 @@ void IVCClose(void)
 	if( gfp )
 		fclose(gfp);
 	gfp = nil;
+}
+
+////
+void dataFeed(const UInt32 uid, const char *fieldName, const UInt8 fieldType,
+			   void *data, const UInt32 size)
+{
+	UInt32 *	uint32	= (UInt32 *)data;
+	SInt32 *	sint32	= (SInt32 *)data;
+	SInt16 *	sint16	= (SInt16 *)data;
+	long 		l;
+
+	if( outFeed )
+		switch( fieldType )
+		{
+			case text_outString:
+				outFeed(uid, fieldName, string_utf8, data);
+				break;
+				
+			case text_utf8:
+			case text_ascii:
+				l = size >= kMaxOutStringLength - 1 ? kMaxOutStringLength - 1: size;
+				memcpy(gOutString, data, l);
+				gOutString[l] = 0;
+				outFeed(uid, fieldName, string_utf8, gOutString);
+				break;
+
+			case number_sint16:
+				*sint16 = EndianS16_BtoN(*sint16);
+				outFeed(uid, fieldName, fieldType, data);
+				break;
+				
+			case number_uint32:
+				*uint32 = EndianU32_BtoN(*uint32);
+				outFeed(uid, fieldName, fieldType, data);
+				break;
+
+			case number_sint32:
+				*sint32 = EndianS32_BtoN(*sint32);
+				outFeed(uid, fieldName, fieldType, data);
+				break;
+				
+			case number_rational:
+				for(int i=0; i<2; i++, sint32++)
+					*sint32 = EndianS32_BtoN(*sint32);
+				outFeed(uid, fieldName, fieldType, data);
+				break;
+
+			case number_rational3:
+				for(int i=0; i<6; i++, sint32++)
+					*sint32 = EndianS32_BtoN(*sint32);
+				outFeed(uid, fieldName, fieldType, data);
+				break;
+		}
 }
 
 
@@ -252,7 +316,7 @@ static OSErr ReadCatalogExtraAsPtr(FILE *fp, Ptr *p, UInt32 databytes)
 }
 
 ////
-static void ParseMorsels(const char * masterData, UInt32 masterSize)
+static void ParseMorsels(const char *masterData, UInt32 masterSize)
 {
 	UInt32	fieldTag;
 	UInt32	bytes;
@@ -293,60 +357,59 @@ static void ParseMorsels(const char * masterData, UInt32 masterSize)
 ////
 static char *unflattenMorselProc(const char *path, const void *inData, UInt32 inSize)
 {
-	UInt32		bytes;
-	UInt32		offset;
-	UInt32 		ustrBytes;
-	UInt32		mid;				// unique ID, field type for root nodes
-	long		entries;			// number of item unique ids
-	UInt32 *	fileIDs = nil;		// list of unique ids
-	Ptr			p = (Ptr)inData;
+	UInt32 		nameBytes;
+	UInt32		uidCount;		// number of item unique ids
+	UInt32 *	uids = nil;		// list of unique ids
+	char *		p = (char *)inData;
 	
-	// free space for future compatibility (32 bytes)
-	offset = 32;
+	// free space
+	p+=32;
 	
-	// morsel id (4 bytes)
-	blockMoveData(&p[offset], &mid, bytes = 4);
-	offset += bytes;
-	mid = EndianU32_BtoN(mid);
+	// morsel id, 4 bytes (ignore)
+	p+=4;
 	
-	// number of entries (4 bytes)
-	blockMoveData(&p[offset], &entries, bytes = 4);
-	offset += bytes;
-	entries = EndianU32_BtoN(entries);
-	if( entries )
+	// number of uids, 4 bytes, followed by the uids
+	memcpy(&uidCount, p, 4);
+	uidCount = EndianU32_BtoN(uidCount);
+	p+=4;
+	if( uidCount )
 	{
-		fileIDs = (UInt32 *) &p[offset];
-		offset += (4 * entries);
+		uids = (UInt32 *)p;
+		p += (4 * uidCount);
 	}
-	
-	// name size (4 bytes)
-	blockMoveData(&p[offset], &ustrBytes, bytes = 4);
-	offset += bytes;
-	ustrBytes = EndianU32_BtoN(ustrBytes);
-	
-	// convert name
-	char *n = memToUTF8String((UInt8 *)&p[offset], ustrBytes);
-	
-	if( entries )
-	{
-		char morselPath[10280];
-		strcpy(morselPath, path);
-		strcat(morselPath, "/");
-		strcat(morselPath, n);
 
-		for(UInt32 i=0; i<entries; i++)
-			dataFeed(EndianU32_BtoN(fileIDs[i]), "FILE_Set", text_utf8, morselPath, (UInt32) strlen(morselPath));
+	////////////////////////////////////
+	// Morsel names are always stored on disc in UTF16 format.
+	// We'll convert to UTF8 before
+
+	// name size, 4 bytes
+	memcpy(&nameBytes, p, 4);
+	nameBytes = EndianU32_BtoN(nameBytes);
+	p+=4;
+	char *name = UTF16_TO_UTF8((UInt8 *)p, nameBytes);
+	
+	// dataFeed pathname for uids
+	if( uidCount )
+	{
+		char *fieldName;
+		sprintf(gOutString, "%s/%s", path, name);
+		fieldName = "PATH_Sets";
+			
+		for(UInt32 i=0; i<uidCount; i++)
+			dataFeed(EndianU32_BtoN(uids[i]), fieldName, text_outString, gOutString, 1);
 	}
 	
-	return n;
+	return name;
 }
 
 ////
-static char *unflattenUFListProc(const char *path, const void *data, const UInt32 size)
+static char *unflattenUFListProc(const char *path, const void *data, const UInt32 dataBytes)
 {
-	char *cstr = memToUTF8String((UInt8 *)data, size);
-	dataFeed(gUserFieldCount++, "DEF_UserField", text_utf8, cstr, (UInt32)strlen(cstr));
-	return cstr;
+	char *userField = UTF16_TO_UTF8((UInt8 *)data, dataBytes);
+	dataFeed(gUserFieldCount++, "DEF_UserField", text_outString, userField, 1);
+	free(userField);
+
+	return nil;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -355,15 +418,13 @@ static char *unflattenUFListProc(const char *path, const void *data, const UInt3
 ////
 static OSErr ReadFolders(FILE *fp, char *inpath)
 {
-	char name[1024];
+	char *folderName = nil;
 	char path[10240];
 	
 	data_chunk_header dch;
 	folder_structure_header	fh;
 	UInt32 bytes;
 	
-	char *modernName = nil;
-	char *legacyName = nil;
 	UInt32 *fileUids = nil;
 	UInt32 *nameLengths = nil;
 	UInt32 *subFolderOffsets = nil;
@@ -403,15 +464,15 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 
 
 	////////////////////
-	// read in unicode name
+	// read in unicode name UTF16 & Convert to UTF8
 
 	if( fh.modern_name_length )
 	{
 		bytes = fh.modern_name_length;
-		modernName = malloc(bytes);
-		if((myErr = myfread(fp, &bytes, modernName)))
-			goto bail;
-		memoryToUTF8String((UInt8*)modernName, bytes, name, 1024);
+		UInt8 *nameBuf = malloc(bytes);
+		myfread(fp, &bytes, nameBuf);
+		folderName = UTF16_TO_UTF8(nameBuf, bytes);
+		free(nameBuf);
 	}
 
 
@@ -429,19 +490,16 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 		}
 		else
 		{
-			legacyName = malloc(bytes);
-			if((myErr = myfread(fp, &bytes, legacyName)))
-				goto bail;
-
-			memoryToUTF8String((UInt8*)legacyName, bytes, name, 1024);
+			folderName = calloc(bytes + 1, 1);
+			myfread(fp, &bytes, folderName);
 		}
 	}
 	
-	if( strcmp(name, "<root>") )
+	if( folderName && strcmp(folderName, "<root>") )
 	{
 		strcpy(path, inpath);
 		strcat(path, "/");
-		strcat(path, name);
+		strcat(path, folderName);
 	}
 	else
 		path[0] = 0;
@@ -486,12 +544,12 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 			if((myErr = myfread(fp, &bytes, fileNameBuffer)))
 				goto bail;
 			
-			char fileName[1028];
-			memoryToUTF8String((UInt8*)fileNameBuffer, bytes, fileName, 1028);
+			char *fileName = UTF16_TO_UTF8((UInt8*)fileNameBuffer, bytes);
 			char filePath[10280];
 			strcpy(filePath, path);
 			strcat(filePath, "/");
 			strcat(filePath, fileName);
+			free(fileName);
 
 			dataFeed(fileUids[i], "FILE_Path", text_utf8, filePath, (UInt32) strlen(filePath));
 		}
@@ -517,6 +575,8 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 
 
 bail:
+	if( folderName )
+		free(folderName);
 	return myErr;
 }
 
@@ -852,47 +912,6 @@ static UInt32 UnflattenData(const char* path, const char* flatData, UInt32 flatS
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - Strings
-
-////
-static char *memToUTF8String(const UInt8 *buf, const UInt32 bufLen)
-{
-	CFStringEncoding encoding = kCFStringEncodingUTF8;
-	if( bufLen > 0 )
-	{
-		if( bufLen>=2 && buf[0]==0xFF && buf[1]==0xFE )
-			encoding = kCFStringEncodingUnicode;
-		else if( bufLen>=2 && buf[0]==0xFE && buf[1]==0xFF )
-			encoding = kCFStringEncodingUnicode;
-	}
-	
-	CFStringRef str = CFStringCreateWithBytesNoCopy(NULL, buf, bufLen, encoding, false, NULL);
-	CFIndex len = 2 * (CFStringGetLength(str) + 1); // storage is UTF 16 + 1 char for nil termination
-	char *cs = calloc(len, 1);
-	CFStringGetCString(str, cs, len, kCFStringEncodingUTF8);
-	return cs;
-}
-
-
-////
-static void memoryToUTF8String(UInt8 *buf, UInt32 bufLen, char *cs, UInt32 maxOutLen)
-{
-	CFStringEncoding encoding = kCFStringEncodingUTF8;
-	if( bufLen > 0 )
-	{
-		if( bufLen>=2 && buf[0]==0xFF && buf[1]==0xFE )
-			encoding = kCFStringEncodingUnicode;
-		else if( bufLen>=2 && buf[0]==0xFE && buf[1]==0xFF )
-			encoding = kCFStringEncodingUnicode;
-	}
-	
-	CFStringRef str = CFStringCreateWithBytesNoCopy(NULL, buf, bufLen, encoding, false, NULL);
-	CFStringGetCString(str, cs, maxOutLen, kCFStringEncodingUTF8);
-	CFRelease(str);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark - Low Level
 
 ////
@@ -912,13 +931,16 @@ static OSErr myfseek(FILE *fp, int ref, SInt32 len)
 }
 
 ////
-static void blockMoveData(void *src, void *dst, UInt32 len)
+static char *UTF16_TO_UTF8(UInt8 *buf, UInt32 bufLen)
 {
-	memcpy(dst, src, len);
+	char *name = calloc(bufLen+2, 1);
+	CFStringRef str = CFStringCreateWithBytesNoCopy(NULL, buf, bufLen, kCFStringEncodingUTF16, false, NULL);
+	CFStringGetCString(str, name, bufLen, kCFStringEncodingUTF8);
+	return name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - Low Level
+#pragma mark - Labels
 
 ////
 static const char *fieldName(UInt32 tag)
