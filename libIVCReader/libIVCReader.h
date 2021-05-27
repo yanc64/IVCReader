@@ -22,11 +22,10 @@ enum {
 // Callback Field Types
 enum {
 	string_utf8, 			// null terminated UTF8 string
-	number_sint16,			// signed number 16 bit
-	number_sint32,			// signed number 32 bit
-	number_uint32,			// unsigned number 32 bit
-	number_rational,		// an array of 2 unsigned 32 bit numbers. first is nominator, second is denominator
-	number_rational3,		// an array of 3 rationals (i.e. 6 32 bit numbers)
+	number_sint32,			// signed integer 32 bit
+	number_uint32,			// unsigned integer 32 bit
+	number_rational,		// an array of 2 unsigned 32 bit integers. first is nominator, second is denominator
+	number_rational3,		// an array of 3 rationals (i.e. 6 x 32 bit integers)
 };
 
 typedef void (*DataFeed)(const UInt32 uid,

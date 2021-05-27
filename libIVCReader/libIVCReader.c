@@ -22,7 +22,7 @@ static DataFeed 	outFeed;
 
 enum {
 	text_outString, // null terminated
-	number_sint16_native = 100, text_utf16, text_utf8, text_ascii
+	number_sint16N = 100, number_sint16B, text_utf16, text_utf8, text_ascii
 };
 
 
@@ -110,12 +110,14 @@ void IVCClose(void)
 }
 
 ////
-void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *data, const UInt32 size)
+void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *data, const UInt32 strlen)
 {
 	UInt32 *	uint32	= (UInt32 *)data;
 	SInt32 *	sint32	= (SInt32 *)data;
 	SInt16 *	sint16	= (SInt16 *)data;
-	char *cstr;
+
+	char *		cstr;
+	SInt32 		snum32;
 	
 	
 	if( outFeed )
@@ -126,30 +128,40 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 				break;
 				
 			case text_utf16:
-				cstr = UTF8_FROM_UTF16(data, size);
-				outFeed(uid, fName, string_utf8, cstr);
-				free(cstr);
+				if( strlen )
+				{
+					cstr = UTF8_FROM_UTF16(data, strlen);
+					outFeed(uid, fName, string_utf8, cstr);
+					free(cstr);
+				}
 				break;
 				
 			case text_ascii:
-				cstr = UTF8_FROM_ASCII(data, size);
-				outFeed(uid, fName, string_utf8, cstr);
-				free(cstr);
+				if( strlen )
+				{
+					cstr = UTF8_FROM_ASCII(data, strlen);
+					outFeed(uid, fName, string_utf8, cstr);
+					free(cstr);
+				}
 				break;
 				
 			case text_utf8:
-				cstr = UTF8_FROM_UTF8(data, size);
-				outFeed(uid, fName, string_utf8, cstr);
-				free(cstr);
+				if( strlen )
+				{
+					cstr = UTF8_FROM_UTF8(data, strlen);
+					outFeed(uid, fName, string_utf8, cstr);
+					free(cstr);
+				}
 				break;
 				
-			case number_sint16_native:
-				outFeed(uid, fName, number_sint16, data);
+			case number_sint16N:
+				snum32 = (SInt32)*sint16;
+				outFeed(uid, fName, number_sint32, &snum32);
 				break;
 				
-			case number_sint16:
-				*sint16 = EndianS16_BtoN(*sint16);
-				outFeed(uid, fName, fieldType, data);
+			case number_sint16B:
+				snum32 = EndianS16_BtoN(*sint16);
+				outFeed(uid, fName, number_sint32, &snum32);
 				break;
 				
 			case number_uint32:
@@ -346,12 +358,8 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 	{
 		char pathString[10480];
 		sprintf(pathString, "%s/%s", path, name);
-		
-		char *fName;
-		fName = gMorselIsHK ? "PATH_KeywordTree":"PATH_SetTree";
-		
 		for(UInt32 i=0; i<uidCount; i++)
-			dataFeed(EndianU32_BtoN(uids[i]), fName, text_outString, pathString, 0);
+			dataFeed(EndianU32_BtoN(uids[i]), gMorselIsHK ? kPATH_KeywordTree: kPATH_SetTree, text_outString, pathString, 0);
 	}
 	
 	return name;
@@ -360,7 +368,7 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 ////
 static char *unflattenUFieldProc(char *path, void *inData, UInt32 inSize)
 {
-	dataFeed(gUserFieldCount++, "DEFN_UserField", text_utf16, inData, inSize);
+	dataFeed(gUserFieldCount++, kUF_Definition, text_utf16, inData, inSize);
 	return nil;
 }
 
@@ -508,7 +516,7 @@ static OSErr ReadFolders(FILE *fp, char *inpath)
 			free(fileName);
 			free(fileNameBuffer);
 			
-			dataFeed(fileUids[i], "PATH_File", text_outString, filePath, 0);
+			dataFeed(fileUids[i], kPATH_FileTree, text_outString, filePath, 0);
 		}
 	}
 	
@@ -557,11 +565,11 @@ static OSErr ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total)
 		
 		v = ci->flags.label;
 		if( v )
-			dataFeed(ci->uniqueID, fieldName(kIPTCRatingField), number_sint16_native, &v, 0);
+			dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
 
 		v = ci->flags.rating;
 		if( v )
-			dataFeed(ci->uniqueID, fieldName(kIPTCRatingField), number_sint16_native, &v, 0);
+			dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
 
 		myErr = ReadFileBlocks(fp, ci);
 	}
@@ -623,7 +631,7 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
 			return myErr;
-		dataFeed(ci->uniqueID, fieldName(kINFOURLSourceField), text_ascii, data, bytes);
+		dataFeed(ci->uniqueID, kINFO_URLSource, text_ascii, data, bytes);
 		free(data);
 	}
 	
@@ -633,59 +641,20 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 ////
 static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 {
-	//	in->importTicks				= EndianS32_BtoN(in->importTicks);
-	//	in->type					= EndianU32_BtoN(in->type);
-	//	in->show.tm_mode			= EndianS32_BtoN(in->show.tm_mode);
-	//	in->show.tm_secs			= EndianS32_BtoN(in->show.tm_secs);
-	//	in->fileSize				= EndianS32_BtoN(in->fileSize);
-	
-	dataFeed(uid, "INFO_width"       , number_sint32, &in->width, 1);
-	dataFeed(uid, "INFO_height"      , number_sint32, &in->height, 1);
-	dataFeed(uid, "INFO_resolution"  , number_sint32, &in->resolution, 1);
-	dataFeed(uid, "INFO_depth"       , number_sint32, &in->depth, 1);
-	
-	dataFeed(uid, "INFO_pages"		 , number_sint32, &in->pages, 1);
-	dataFeed(uid, "INFO_tracks"		 , number_sint32, &in->tracks, 1);
-	dataFeed(uid, "INFO_duration"	 , number_sint32, &in->duration, 1);
-	dataFeed(uid, "INFO_channels"	 , number_sint32, &in->channels, 1);
-	dataFeed(uid, "INFO_sampleRate"	 , number_sint32, &in->sampleRate, 1);
-	dataFeed(uid, "INFO_sampleSize"	 , number_sint32, &in->sampleSize, 1);
-	
-	dataFeed(uid, "INFO_vdFrameRate" , number_uint32, &in->vdFrameRate, 1);
-	dataFeed(uid, "INFO_avDataRate"	 , number_uint32, &in->avDataRate, 1);
-	dataFeed(uid, "INFO_colorSpace"	 , number_uint32, &in->colorSpace, 1);
-	
-	
-	//	in->sampleColor				= EndianU32_BtoN(in->sampleColor);
-	//	in->legacy_alias.type		= EndianS32_BtoN(in->legacy_alias.type);
-	//	in->legacy_alias.orig_size	= EndianS16_BtoN(in->legacy_alias.orig_size);
-	//	in->legacy_alias.size		= EndianS16_BtoN(in->legacy_alias.size);
-	//	in->rotate					= EndianU16_BtoN(in->rotate);
-	//	in->archived				= EndianU32_BtoN(in->archived);
-	//	in->created					= EndianU32_BtoN(in->created);
-	//	in->modified				= EndianU32_BtoN(in->modified);
-	//	in->annotated				= EndianU32_BtoN(in->annotated);
-	//	in->poster					= EndianS32_BtoN(in->poster);
-	//	in->pages					= EndianS32_BtoN(in->pages);
-	//	in->tracks					= EndianS32_BtoN(in->tracks);
-	//	in->duration				= EndianS32_BtoN(in->duration);
-	//	in->channels				= EndianS32_BtoN(in->channels);
-	//	in->sampleRate				= EndianS32_BtoN(in->sampleRate);
-	//	in->sampleSize				= EndianS32_BtoN(in->sampleSize);
-	//	in->vdFrameRate				= EndianU32_BtoN(in->vdFrameRate);
-	//	in->avDataRate				= EndianU32_BtoN(in->avDataRate);
-	//	in->colorSpace				= EndianU32_BtoN(in->colorSpace);
-	//	in->compression				= EndianS32_BtoN(in->compression);
-	//	in->textCharacters			= EndianS32_BtoN(in->textCharacters);
-	//	in->textParagraphs			= EndianS32_BtoN(in->textParagraphs);
-	//	in->vdQuality				= EndianU32_BtoN(in->vdQuality);
-	//	in->scratch					= EndianS32_BtoN(in->scratch);
-	//	in->talkSize				= EndianS32_BtoN(in->talkSize);
-	//	in->metaSize				= EndianS32_BtoN(in->metaSize);
-	//	in->pictSize				= EndianS32_BtoN(in->pictSize);
-	//	in->iptcSize				= EndianS32_BtoN(in->iptcSize);
-	//	in->urlfSize				= EndianS32_BtoN(in->urlfSize);
-	
+	dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
+	dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
+	dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
+	dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
+	dataFeed(uid, kINFO_ColorSpace 	 , number_uint32, &in->colorSpace, 1);
+	dataFeed(uid, kINFO_Duration 	 , number_sint32, &in->duration, 1);
+	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
+	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
+	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
+	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
+	dataFeed(uid, kINFO_VDFrameRate  , number_uint32, &in->vdFrameRate, 1);
+	dataFeed(uid, kINFO_AVDataRate 	 , number_uint32, &in->avDataRate, 1);
+	dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
+
 	//	EndianText_BtoN(&in->legacy_name[1], in->legacy_name[0]);
 	//	EndianText_BtoN(&in->legacy_path[1], in->legacy_path[0]);
 }
@@ -700,7 +669,7 @@ static void ParseBlockIPTC(const UInt32 uid, const Ptr buf, const long bufLen)
 	
 	while( bufRead < bufLen )
 	{
-		if( *p == kIPTCEncoding_TEXT || *p == kIPTCEncoding_UTF8 )
+		if( *p == kIPTC_Encoding_TEXT || *p == kIPTC_Encoding_UTF8 )
 		{
 			m = (fip *) &p[1];
 			
@@ -711,7 +680,7 @@ static void ParseBlockIPTC(const UInt32 uid, const Ptr buf, const long bufLen)
 			
 			////
 			const char *fname = fieldName(d.tag);
-			dataFeed(uid, fname, d.enc == kIPTCEncoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
+			dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
 		}
 		// list has trailing garbage - ignore it
 		else
@@ -748,39 +717,39 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 		{
 				// ASCII
 				// These 4 fields are have 4 bytes at the beggining of the data buffer that are not used.
-			case kEXIFMakerField				:
-			case kEXIFModelField				:
-			case kEXIFSoftwareField				:
-			case kEXIFFormatField				: dataFeed(uid, fname, text_ascii,       &m->buf[4], l-12); break;
+			case kEXIF_MakerField				:
+			case kEXIF_ModelField				:
+			case kEXIF_SoftwareField			:
+			case kEXIF_FormatField				: dataFeed(uid, fname, text_ascii,       &m->buf[4], l-12); break;
 				
-			case kEXIFLensField					: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
+			case kEXIF_LensField				: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
 				
-			case kEXIFMeteringModeField			:
-			case kEXIFContrastField      		:
-			case kEXIFSaturationField      		:
-			case kEXIFSharpnessField      		:
-			case kEXIFFocusModeField      		:
-			case kEXIFProgramField      		:
-			case kEXIFSensingMethodField      	:
-			case kEXIFLightSourceField      	:
-			case kEXIFFlashField      			:
-			case kEXIFISOSpeedField      		:
-			case kEXIFNoiseReductionField      	: dataFeed(uid, fname, number_sint16,    m->buf, 1); break;
+			case kEXIF_MeteringModeField		:
+			case kEXIF_ContrastField      		:
+			case kEXIF_SaturationField      	:
+			case kEXIF_SharpnessField      		:
+			case kEXIF_FocusModeField      		:
+			case kEXIF_ProgramField      		:
+			case kEXIF_SensingMethodField      	:
+			case kEXIF_LightSourceField      	:
+			case kEXIF_FlashField      			:
+			case kEXIF_ISOSpeedField      		:
+			case kEXIF_NoiseReductionField      : dataFeed(uid, fname, number_sint16B,    m->buf, 1); break;
 				
-			case kEXIFShutterSpeedField      	:
-			case kEXIFDigitalZoomField      	:
-			case kEXIFApertureField		      	:
-			case kEXIFFocusDistanceField      	:
-			case kEXIFFocalLengthField      	:
-			case kEXIFExposureBiasField      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
+			case kEXIF_ShutterSpeedField      	:
+			case kEXIF_DigitalZoomField      	:
+			case kEXIF_ApertureField		    :
+			case kEXIF_FocusDistanceField      	:
+			case kEXIF_FocalLengthField      	:
+			case kEXIF_ExposureBiasField      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
 				
-			case kEXIFCaptureDateField			: dataFeed(uid, fname, number_uint32,    m->buf, 1); break;
+			case kEXIF_CaptureDateField			: dataFeed(uid, fname, number_uint32,    m->buf, 1); break;
 				
-			case kGPSLatitudeField		      	:
-			case kGPSLongitudeField		      	: dataFeed(uid, fname, number_rational3, m->buf, 1); break;
-			case kGPSLatitudeRefField			:
-			case kGPSLongitudeRefField			: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
-			case kGPSAltitudeField		      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
+			case kGPS_LatitudeField		      	:
+			case kGPS_LongitudeField		    : dataFeed(uid, fname, number_rational3, m->buf, 1); break;
+			case kGPS_LatitudeRefField			:
+			case kGPS_LongitudeRefField			: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
+			case kGPS_AltitudeField		      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
 		}
 	} while ( bufRead < bufLen );
 }
@@ -984,97 +953,92 @@ static const char *fieldName(UInt32 tag)
 {
 	switch( tag )
 	{
-		case kIPTCLabelField				: return kINFOLabel;
-		case kIPTCRatingField				: return kINFORating;
-
-		case kINFOURLSourceField			: return kINFOURLSource;
-
-		case kIPTCHeadlineField				: return kIPTCHeadline;
-		case kIPTCTitleField				: return kIPTCTitle;
-		case kIPTCPrimaryCategoryField		: return kIPTCPrimaryCategory;
-		case kIPTCIntellectualGenreField	: return kIPTCIntellectualGenre;
-		case kIPTCEventField				: return kIPTCEvent;
-		case kIPTCEventDateField			: return kIPTCEventDate;
-		case kIPTCCreatorField				: return kIPTCCreator;
-		case kIPTCCreatorTitleField			: return kIPTCCreatorTitle;
-		case kIPTCCreatorAddressField  		: return kIPTCCreatorAddress;
-		case kIPTCCreatorCityField			: return kIPTCCreatorCity;
-		case kIPTCCreatorStateField			: return kIPTCCreatorState;
-		case kIPTCCreatorPostcodeField		: return kIPTCCreatorPostcode;
-		case kIPTCCreatorCountryField		: return kIPTCCreatorCountry;
-		case kIPTCCreatorPhoneField			: return kIPTCCreatorPhone;
-		case kIPTCCreatorEmailField			: return kIPTCCreatorEmail;
-		case kIPTCCreatorURLField			: return kIPTCCreatorURL;
-		case kIPTCCreditField				: return kIPTCCredit;
-		case kIPTCSourceField				: return kIPTCSource;
-		case kIPTCCopyrightField			: return kIPTCCopyright;
-		case kIPTCTransmissionField			: return kIPTCTransmission;
-		case kIPTCUsageTermsField			: return kIPTCUsageTerms;
-		case kIPTCURLField					: return kIPTCURL;
-		case kIPTCLocationField				: return kIPTCLocation;
-		case kIPTCCityField					: return kIPTCCity;
-		case kIPTCStateField				: return kIPTCState;
-		case kIPTCCountryField				: return kIPTCCountry;
-		case kIPTCCountryCodeField			: return kIPTCCountryCode;
-		case kIPTCInstructionsField			: return kIPTCInstructions;
-		case kIPTCStatusField				: return kIPTCStatus;
-		case kIPTCCaptionWriterField		: return kIPTCCaptionWriter;
-		case kIPTCCaptionField				: return kIPTCCaption;
-		case kIPTCPeopleField				: return kIPTCPeople;
-		case kIPTCKeywordField				: return kIPTCKeyword;
-		case kIPTCCategoryField				: return kIPTCCategory;
-		case kIPTCSceneField				: return kIPTCScene;
-		case kIPTCSubjectReferenceField		: return kIPTCSubjectReference;
+		case kIPTC_HeadlineField			: return kIPTC_Headline;
+		case kIPTC_TitleField				: return kIPTC_Title;
+		case kIPTC_PrimaryCategoryField		: return kIPTC_PrimaryCategory;
+		case kIPTC_IntellectualGenreField	: return kIPTC_IntellectualGenre;
+		case kIPTC_EventField				: return kIPTC_Event;
+		case kIPTC_EventDateField			: return kIPTC_EventDate;
+		case kIPTC_CreatorField				: return kIPTC_Creator;
+		case kIPTC_CreatorTitleField		: return kIPTC_CreatorTitle;
+		case kIPTC_CreatorAddressField  	: return kIPTC_CreatorAddress;
+		case kIPTC_CreatorCityField			: return kIPTC_CreatorCity;
+		case kIPTC_CreatorStateField		: return kIPTC_CreatorState;
+		case kIPTC_CreatorPostcodeField		: return kIPTC_CreatorPostcode;
+		case kIPTC_CreatorCountryField		: return kIPTC_CreatorCountry;
+		case kIPTC_CreatorPhoneField		: return kIPTC_CreatorPhone;
+		case kIPTC_CreatorEmailField		: return kIPTC_CreatorEmail;
+		case kIPTC_CreatorURLField			: return kIPTC_CreatorURL;
+		case kIPTC_CreditField				: return kIPTC_Credit;
+		case kIPTC_SourceField				: return kIPTC_Source;
+		case kIPTC_CopyrightField			: return kIPTC_Copyright;
+		case kIPTC_TransmissionField		: return kIPTC_Transmission;
+		case kIPTC_UsageTermsField			: return kIPTC_UsageTerms;
+		case kIPTC_URLField					: return kIPTC_URL;
+		case kIPTC_LocationField			: return kIPTC_Location;
+		case kIPTC_CityField				: return kIPTC_City;
+		case kIPTC_StateField				: return kIPTC_State;
+		case kIPTC_CountryField				: return kIPTC_Country;
+		case kIPTC_CountryCodeField			: return kIPTC_CountryCode;
+		case kIPTC_InstructionsField		: return kIPTC_Instructions;
+		case kIPTC_StatusField				: return kIPTC_Status;
+		case kIPTC_CaptionWriterField		: return kIPTC_CaptionWriter;
+		case kIPTC_CaptionField				: return kIPTC_Caption;
+		case kIPTC_PeopleField				: return kIPTC_People;
+		case kIPTC_KeywordField				: return kIPTC_Keyword;
+		case kIPTC_CategoryField			: return kIPTC_Category;
+		case kIPTC_SceneField				: return kIPTC_Scene;
+		case kIPTC_SubjectReferenceField	: return kIPTC_SubjectReference;
 			
-		case kEXIFMakerField				: return kEXIFMaker;
-		case kEXIFModelField				: return kEXIFModel;
-		case kEXIFSoftwareField				: return kEXIFSoftware;
-		case kEXIFFormatField				: return kEXIFFormat;
-		case kEXIFVersionField				: return kEXIFVersion;
-		case kEXIFCaptureDateField			: return kEXIFCaptureDate;
-		case kEXIFProgramField				: return kEXIFProgram;
-		case kEXIFISOSpeedField				: return kEXIFISOSpeed;
-		case kEXIFExposureBiasField			: return kEXIFExposureBias;
-		case kEXIFShutterSpeedField			: return kEXIFShutterSpeed;
-		case kEXIFApertureField				: return kEXIFAperture;
-		case kEXIFFocusDistanceField		: return kEXIFFocusDistance;
-		case kEXIFMeteringModeField			: return kEXIFMeteringMode;
-		case kEXIFLightSourceField			: return kEXIFLightSource;
-		case kEXIFFlashField				: return kEXIFFlash;
-		case kEXIFFocalLengthField			: return kEXIFFocalLength;
-		case kEXIFSensingMethodField		: return kEXIFSensingMethod;
-		case kEXIFNoiseReductionField		: return kEXIFNoiseReduction;
-		case kEXIFContrastField				: return kEXIFContrast;
-		case kEXIFSharpnessField			: return kEXIFSharpness;
-		case kEXIFSaturationField			: return kEXIFSaturation;
-		case kEXIFFocusModeField			: return kEXIFFocusMode;
-		case kEXIFDigitalZoomField			: return kEXIFDigitalZoom;
-		case kEXIFLensField					: return kEXIFLens;
+		case kEXIF_MakerField				: return kEXIF_Maker;
+		case kEXIF_ModelField				: return kEXIF_Model;
+		case kEXIF_SoftwareField			: return kEXIF_Software;
+		case kEXIF_FormatField				: return kEXIF_Format;
+		case kEXIF_VersionField				: return kEXIF_Version;
+		case kEXIF_CaptureDateField			: return kEXIF_CaptureDate;
+		case kEXIF_ProgramField				: return kEXIF_Program;
+		case kEXIF_ISOSpeedField			: return kEXIF_ISOSpeed;
+		case kEXIF_ExposureBiasField		: return kEXIF_ExposureBias;
+		case kEXIF_ShutterSpeedField		: return kEXIF_ShutterSpeed;
+		case kEXIF_ApertureField			: return kEXIF_Aperture;
+		case kEXIF_FocusDistanceField		: return kEXIF_FocusDistance;
+		case kEXIF_MeteringModeField		: return kEXIF_MeteringMode;
+		case kEXIF_LightSourceField			: return kEXIF_LightSource;
+		case kEXIF_FlashField				: return kEXIF_Flash;
+		case kEXIF_FocalLengthField			: return kEXIF_FocalLength;
+		case kEXIF_SensingMethodField		: return kEXIF_SensingMethod;
+		case kEXIF_NoiseReductionField		: return kEXIF_NoiseReduction;
+		case kEXIF_ContrastField			: return kEXIF_Contrast;
+		case kEXIF_SharpnessField			: return kEXIF_Sharpness;
+		case kEXIF_SaturationField			: return kEXIF_Saturation;
+		case kEXIF_FocusModeField			: return kEXIF_FocusMode;
+		case kEXIF_DigitalZoomField			: return kEXIF_DigitalZoom;
+		case kEXIF_LensField				: return kEXIF_Lens;
 			
-		case kGPSLatitudeField		      	: return kGPSLatitude;
-		case kGPSLongitudeField		      	: return kGPSLongitude;
-		case kGPSLatitudeRefField			: return kGPSLatitudeRef;
-		case kGPSLongitudeRefField			: return kGPSLongitudeRef;
-		case kGPSAltitudeField		      	: return kGPSAltitude;
+		case kGPS_LatitudeField		      	: return kGPS_Latitude;
+		case kGPS_LongitudeField		    : return kGPS_Longitude;
+		case kGPS_LatitudeRefField			: return kGPS_LatitudeRef;
+		case kGPS_LongitudeRefField			: return kGPS_LongitudeRef;
+		case kGPS_AltitudeField		      	: return kGPS_Altitude;
 
-		case kUser01Field					: return kUserField01;
-		case kUser02Field					: return kUserField02;
-		case kUser03Field					: return kUserField03;
-		case kUser04Field					: return kUserField04;
-		case kUser05Field					: return kUserField05;
-		case kUser06Field					: return kUserField06;
-		case kUser07Field					: return kUserField07;
-		case kUser08Field					: return kUserField08;
-		case kUser09Field					: return kUserField09;
-		case kUser10Field					: return kUserField10;
-		case kUser11Field					: return kUserField11;
-		case kUser12Field					: return kUserField12;
-		case kUser13Field					: return kUserField13;
-		case kUser14Field					: return kUserField14;
-		case kUser15Field					: return kUserField15;
-		case kUser16Field					: return kUserField16;
+		case kUser01Field					: return kUF_01;
+		case kUser02Field					: return kUF_02;
+		case kUser03Field					: return kUF_03;
+		case kUser04Field					: return kUF_04;
+		case kUser05Field					: return kUF_05;
+		case kUser06Field					: return kUF_06;
+		case kUser07Field					: return kUF_07;
+		case kUser08Field					: return kUF_08;
+		case kUser09Field					: return kUF_09;
+		case kUser10Field					: return kUF_10;
+		case kUser11Field					: return kUF_11;
+		case kUser12Field					: return kUF_12;
+		case kUser13Field					: return kUF_13;
+		case kUser14Field					: return kUF_14;
+		case kUser15Field					: return kUF_15;
+		case kUser16Field					: return kUF_16;
 	}
 	
-	printf("uknown tag %#010x\r", tag); // TRCK
+	// printf("uknown tag %#010x\r", tag); // TRCK
 	return "<?>";
 }
