@@ -9,9 +9,10 @@
 #ifndef __libIVCFields__
 #define __libIVCFields__
 
+// Path strings contain components separated by slash '/'
 #define kPATH_FileTree				"PATH_FileTree"			// string, path
-#define kPATH_SetTree				"PATH_SetTree"
-#define kPATH_KeywordTree			"PATH_KeywordTree"
+#define kPATH_SetTree				"PATH_SetTree"			// string, path, repeating
+#define kPATH_KeywordTree			"PATH_KeywordTree"		// string, path, repeating
 
 #define kINFO_Label					"INFO_Label"
 #define kINFO_Rating				"INFO_Rating"

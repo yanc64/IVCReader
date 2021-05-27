@@ -19,6 +19,10 @@ enum {
 	FoldersChunkIdentifierError, memoryErr, wrongFileCountErr, parsingCantStartErr
 };
 
+// DataFeed
+// DataFeed is a callback that Will return field name, type  and data for an item with a specific UID.
+// If UID is 0, properties belong to the catalog and not to a specific item. (user field definitions)
+
 // Callback Field Types
 enum {
 	string_utf8, 			// null terminated UTF8 string
@@ -43,6 +47,9 @@ extern  "C" {
 void IVCOpen(char *filename, SInt16 *total, SInt16 *err);
 void IVCReport(void *clientInfo, DataFeed dataFeed, SInt16 *err);
 void IVCClose(void);
+
+// Utilities
+UInt8 IVCIsRepeatingField(const char *fieldName);
 
 
 #ifdef __cplusplus

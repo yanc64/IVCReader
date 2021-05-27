@@ -11,15 +11,18 @@
 #include "private.h"
 #include "libIVCReader.h"
 
-// Local cariables
-static UInt32		gFileCount;
-static UInt32		gCurrentChuckOffset;
-static UInt32 		gUserFieldCount = 0;
-static bool 		gMorselIsHK = false;
+#define kVersionNumber 	"1.0a1"
+#define kVersionDate	"27.May.21"
 
-static FILE *		gfp;
-static DataFeed 	outFeed;
-static void *		outClientInfo;
+// Local cariables
+static UInt32			gFileCount;
+static UInt32			gCurrentChuckOffset;
+static UInt32 			gUserFieldCount = 0;
+static bool 			gMorselIsHK = false;
+
+static FILE *			gfp;
+static DataFeed 		outFeed;
+static void *			outClientInfo;
 
 enum {
 	text_outString, // null terminated
@@ -33,6 +36,8 @@ enum {
 ////
 void IVCOpen(char *filename, SInt16 *outTotal, SInt16 *outStatus)
 {
+	printf("\rlibIVCReader %s [%s]\r\r", kVersionNumber, kVersionDate);
+
 	UInt32 total = 0;
 	OSErr myErr = noErr;
 	
@@ -110,6 +115,23 @@ void IVCClose(void)
 		fclose(gfp);
 	gfp = nil;
 }
+
+////
+UInt8 IVCIsRepeatingField(const char *fieldName)
+{
+	return (!strcmp(fieldName, kIPTC_Keyword) ||
+			!strcmp(fieldName, kIPTC_Category) ||
+			!strcmp(fieldName, kIPTC_Scene) ||
+			!strcmp(fieldName, kIPTC_People) ||
+			!strcmp(fieldName, kIPTC_SubjectReference) ||
+
+			!strcmp(fieldName, kPATH_KeywordTree) ||
+			!strcmp(fieldName, kPATH_SetTree) ||
+
+			!strcmp(fieldName, kUF_Definition)
+			);
+}
+
 
 ////
 void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *data, const UInt32 strlen)
