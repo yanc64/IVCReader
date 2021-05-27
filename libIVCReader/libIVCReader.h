@@ -28,7 +28,8 @@ enum {
 	number_rational3,		// an array of 3 rationals (i.e. 6 x 32 bit integers)
 };
 
-typedef void (*DataFeed)(const UInt32 uid,
+typedef void (*DataFeed)(void *clientInfo,
+						 const UInt32 uid,
 						 const char *fieldName,
 						 const UInt8 fieldType,
 						 const void *fieldData
@@ -40,7 +41,7 @@ extern  "C" {
 #endif
 
 void IVCOpen(char *filename, SInt16 *total, SInt16 *err);
-void IVCReport(DataFeed dataFeed, SInt16 *err);
+void IVCReport(void *clientInfo, DataFeed dataFeed, SInt16 *err);
 void IVCClose(void);
 
 

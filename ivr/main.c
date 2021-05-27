@@ -9,11 +9,16 @@
 #include "libIVCReader.h"
 
 /////
-static void _dataFeedProc(const UInt32 uid, const char *name, const UInt8 type, const void *data)
+static void _dataFeedProc(void *clientInfo,
+						  const UInt32 uid,
+						  const char *fieldName,
+						  const UInt8 fieldType,
+						  const void *data
+						  )
 {
-	printf("uid = %-10u %-30s ", uid, name);
+	printf("uid = %-10u %-30s ", uid, fieldName);
 
-	switch( type )
+	switch( fieldType )
 	{
 		case string_utf8		: printf("= %s\r", (char *) data); break;
 		case number_sint32    	: printf("= %d\r", *(SInt32 *)&data[0]); break;
@@ -35,7 +40,7 @@ int main(int argc, const char * argv[])
 	IVCOpen(filename, &total, &status);
 	printf("%s [open status = %d, file count = %d]\r", filename, status, total);
 
-	IVCReport(_dataFeedProc, &status);
+	IVCReport(nil, _dataFeedProc, &status);
 	printf("%s [read status = %d]\r", filename, status);
 
 	IVCClose();

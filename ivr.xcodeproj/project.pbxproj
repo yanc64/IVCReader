@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2C287915265F709B007F1DF8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C287914265F709B007F1DF8 /* AppDelegate.m */; };
+		2C287918265F709B007F1DF8 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C287917265F709B007F1DF8 /* ViewController.m */; };
+		2C28791A265F709D007F1DF8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C287919265F709D007F1DF8 /* Assets.xcassets */; };
+		2C28791D265F709D007F1DF8 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2C28791B265F709D007F1DF8 /* Main.storyboard */; };
+		2C287920265F709D007F1DF8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C28791F265F709D007F1DF8 /* main.m */; };
+		2C287927265F71C7007F1DF8 /* libIVCReader.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */; };
+		2C28792A265F71D0007F1DF8 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
 		2C2CBF6626556BFB006D96A4 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2C2CBF6526556BFB006D96A4 /* main.c */; };
 		2C85616026578FCC00988D91 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C85615F26578FCC00988D91 /* CoreFoundation.framework */; };
 		2CC1210B265E0CEC00D57534 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
@@ -17,6 +24,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2C287925265F70BE007F1DF8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2CBF5A26556BFB006D96A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2CDF3CDA265EC6BC00A31FD1;
+			remoteInfo = IVCReader;
+		};
+		2C287928265F71C7007F1DF8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2CBF5A26556BFB006D96A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2CDF3CDA265EC6BC00A31FD1;
+			remoteInfo = IVCReader;
+		};
 		2CDF3CE8265EC8D300A31FD1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2C2CBF5A26556BFB006D96A4 /* Project object */;
@@ -39,6 +60,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2C287911265F709B007F1DF8 /* ivrObjc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ivrObjc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2C287913265F709B007F1DF8 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		2C287914265F709B007F1DF8 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		2C287916265F709B007F1DF8 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		2C287917265F709B007F1DF8 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		2C287919265F709D007F1DF8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2C28791C265F709D007F1DF8 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		2C28791E265F709D007F1DF8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2C28791F265F709D007F1DF8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		2C287921265F709D007F1DF8 /* ivrObjc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ivrObjc.entitlements; sourceTree = "<group>"; };
 		2C2CBF6226556BFB006D96A4 /* ivr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ivr; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C2CBF6526556BFB006D96A4 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		2C85615F26578FCC00988D91 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
@@ -53,6 +84,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2C28790E265F709B007F1DF8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C28792A265F71D0007F1DF8 /* libiconv.2.4.0.tbd in Frameworks */,
+				2C287927265F71C7007F1DF8 /* libIVCReader.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2C2CBF5F26556BFB006D96A4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -73,11 +113,28 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2C287912265F709B007F1DF8 /* ivrObjc */ = {
+			isa = PBXGroup;
+			children = (
+				2C287913265F709B007F1DF8 /* AppDelegate.h */,
+				2C287914265F709B007F1DF8 /* AppDelegate.m */,
+				2C287916265F709B007F1DF8 /* ViewController.h */,
+				2C287917265F709B007F1DF8 /* ViewController.m */,
+				2C287919265F709D007F1DF8 /* Assets.xcassets */,
+				2C28791B265F709D007F1DF8 /* Main.storyboard */,
+				2C28791E265F709D007F1DF8 /* Info.plist */,
+				2C28791F265F709D007F1DF8 /* main.m */,
+				2C287921265F709D007F1DF8 /* ivrObjc.entitlements */,
+			);
+			path = ivrObjc;
+			sourceTree = "<group>";
+		};
 		2C2CBF5926556BFB006D96A4 = {
 			isa = PBXGroup;
 			children = (
-				2CDF3CDF265EC6CE00A31FD1 /* libIVCReader */,
 				2C2CBF6426556BFB006D96A4 /* ivr */,
+				2C287912265F709B007F1DF8 /* ivrObjc */,
+				2CDF3CDF265EC6CE00A31FD1 /* libIVCReader */,
 				2C2CBF6326556BFB006D96A4 /* Products */,
 				2C85615E26578FCC00988D91 /* Frameworks */,
 			);
@@ -88,6 +145,7 @@
 			children = (
 				2C2CBF6226556BFB006D96A4 /* ivr */,
 				2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */,
+				2C287911265F709B007F1DF8 /* ivrObjc.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -137,6 +195,25 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		2C287910265F709B007F1DF8 /* ivrObjc */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2C287922265F709D007F1DF8 /* Build configuration list for PBXNativeTarget "ivrObjc" */;
+			buildPhases = (
+				2C28790D265F709B007F1DF8 /* Sources */,
+				2C28790E265F709B007F1DF8 /* Frameworks */,
+				2C28790F265F709B007F1DF8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2C287926265F70BE007F1DF8 /* PBXTargetDependency */,
+				2C287929265F71C7007F1DF8 /* PBXTargetDependency */,
+			);
+			name = ivrObjc;
+			productName = ivrObjc;
+			productReference = 2C287911265F709B007F1DF8 /* ivrObjc.app */;
+			productType = "com.apple.product-type.application";
+		};
 		2C2CBF6126556BFB006D96A4 /* ivr */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2C2CBF6926556BFB006D96A4 /* Build configuration list for PBXNativeTarget "ivr" */;
@@ -180,6 +257,9 @@
 			attributes = {
 				LastUpgradeCheck = 1250;
 				TargetAttributes = {
+					2C287910265F709B007F1DF8 = {
+						CreatedOnToolsVersion = 12.5;
+					};
 					2C2CBF6126556BFB006D96A4 = {
 						CreatedOnToolsVersion = 12.5;
 					};
@@ -202,12 +282,35 @@
 			projectRoot = "";
 			targets = (
 				2C2CBF6126556BFB006D96A4 /* ivr */,
+				2C287910265F709B007F1DF8 /* ivrObjc */,
 				2CDF3CDA265EC6BC00A31FD1 /* IVCReader */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		2C28790F265F709B007F1DF8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C28791A265F709D007F1DF8 /* Assets.xcassets in Resources */,
+				2C28791D265F709D007F1DF8 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		2C28790D265F709B007F1DF8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C287918265F709B007F1DF8 /* ViewController.m in Sources */,
+				2C287920265F709D007F1DF8 /* main.m in Sources */,
+				2C287915265F709B007F1DF8 /* AppDelegate.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2C2CBF5E26556BFB006D96A4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -227,6 +330,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		2C287926265F70BE007F1DF8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2CDF3CDA265EC6BC00A31FD1 /* IVCReader */;
+			targetProxy = 2C287925265F70BE007F1DF8 /* PBXContainerItemProxy */;
+		};
+		2C287929265F71C7007F1DF8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2CDF3CDA265EC6BC00A31FD1 /* IVCReader */;
+			targetProxy = 2C287928265F71C7007F1DF8 /* PBXContainerItemProxy */;
+		};
 		2CDF3CE9265EC8D300A31FD1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 2CDF3CDA265EC6BC00A31FD1 /* IVCReader */;
@@ -234,7 +347,58 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin PBXVariantGroup section */
+		2C28791B265F709D007F1DF8 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2C28791C265F709D007F1DF8 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
+		2C287923265F709D007F1DF8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ivrObjc/ivrObjc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 7V3CUZQKCG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = ivrObjc/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = SmartToolboxIdeas.ivrObjc;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		2C287924265F709D007F1DF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ivrObjc/ivrObjc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 7V3CUZQKCG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = ivrObjc/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = SmartToolboxIdeas.ivrObjc;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		2C2CBF6726556BFB006D96A4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -391,6 +555,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2C287922265F709D007F1DF8 /* Build configuration list for PBXNativeTarget "ivrObjc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2C287923265F709D007F1DF8 /* Debug */,
+				2C287924265F709D007F1DF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		2C2CBF5D26556BFB006D96A4 /* Build configuration list for PBXProject "ivr" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

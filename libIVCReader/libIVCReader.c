@@ -19,6 +19,7 @@ static bool 		gMorselIsHK = false;
 
 static FILE *		gfp;
 static DataFeed 	outFeed;
+static void *		outClientInfo;
 
 enum {
 	text_outString, // null terminated
@@ -92,9 +93,10 @@ bail:
 }
 
 ////
-void IVCReport(DataFeed inDataFeed, SInt16 *outStatus)
+void IVCReport(void *inClientInfo, DataFeed inDataFeed, SInt16 *outStatus)
 {
 	outFeed = inDataFeed;
+	outClientInfo = inClientInfo;
 	
 	OSErr myErr = gfp ? ReadCatalogChunks(gfp): parsingCantStartErr;
 	if( outStatus )
@@ -124,14 +126,14 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 		switch( fieldType )
 		{
 			case text_outString:
-				outFeed(uid, fName, string_utf8, data);
+				outFeed(outClientInfo, uid, fName, string_utf8, data);
 				break;
 				
 			case text_utf16:
 				if( strlen )
 				{
 					cstr = UTF8_FROM_UTF16(data, strlen);
-					outFeed(uid, fName, string_utf8, cstr);
+					outFeed(outClientInfo, uid, fName, string_utf8, cstr);
 					free(cstr);
 				}
 				break;
@@ -140,7 +142,7 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 				if( strlen )
 				{
 					cstr = UTF8_FROM_ASCII(data, strlen);
-					outFeed(uid, fName, string_utf8, cstr);
+					outFeed(outClientInfo, uid, fName, string_utf8, cstr);
 					free(cstr);
 				}
 				break;
@@ -149,41 +151,41 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 				if( strlen )
 				{
 					cstr = UTF8_FROM_UTF8(data, strlen);
-					outFeed(uid, fName, string_utf8, cstr);
+					outFeed(outClientInfo, uid, fName, string_utf8, cstr);
 					free(cstr);
 				}
 				break;
 				
 			case number_sint16N:
 				snum32 = (SInt32)*sint16;
-				outFeed(uid, fName, number_sint32, &snum32);
+				outFeed(outClientInfo, uid, fName, number_sint32, &snum32);
 				break;
 				
 			case number_sint16B:
 				snum32 = EndianS16_BtoN(*sint16);
-				outFeed(uid, fName, number_sint32, &snum32);
+				outFeed(outClientInfo, uid, fName, number_sint32, &snum32);
 				break;
 				
 			case number_uint32:
 				*uint32 = EndianU32_BtoN(*uint32);
-				outFeed(uid, fName, fieldType, data);
+				outFeed(outClientInfo, uid, fName, fieldType, data);
 				break;
 				
 			case number_sint32:
 				*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fName, fieldType, data);
+				outFeed(outClientInfo, uid, fName, fieldType, data);
 				break;
 				
 			case number_rational:
 				for(int i=0; i<2; i++, sint32++)
 					*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fName, fieldType, data);
+				outFeed(outClientInfo, uid, fName, fieldType, data);
 				break;
 				
 			case number_rational3:
 				for(int i=0; i<6; i++, sint32++)
 					*sint32 = EndianS32_BtoN(*sint32);
-				outFeed(uid, fName, fieldType, data);
+				outFeed(outClientInfo, uid, fName, fieldType, data);
 				break;
 		}
 }
