@@ -588,12 +588,9 @@ static OSErr ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total)
 		SInt16 v;
 		
 		v = ci->flags.label;
-		if( v )
-			dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
-
+		dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
 		v = ci->flags.rating;
-		if( v )
-			dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
+		dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
 
 		myErr = ReadFileBlocks(fp, ci);
 	}
@@ -669,15 +666,18 @@ static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 	dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
 	dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
 	dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
-	dataFeed(uid, kINFO_ColorSpace 	 , number_uint32, &in->colorSpace, 1);
-	dataFeed(uid, kINFO_Duration 	 , number_sint32, &in->duration, 1);
-	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
-	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
-	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
-	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
-	dataFeed(uid, kINFO_VDFrameRate  , number_uint32, &in->vdFrameRate, 1);
-	dataFeed(uid, kINFO_AVDataRate 	 , number_uint32, &in->avDataRate, 1);
+	dataFeed(uid, kINFO_Duration 	 , number_uint32, &in->duration, 1);
+	
+//	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
+//	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
+//	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
+//	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
+
 	dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
+
+	char *css = UTF8_FROM_ASCII((UInt8*)&in->colorSpace, 4);
+	dataFeed(uid, kINFO_ColorSpace 	 , text_outString, css, 1);
+	free(css);
 
 	//	EndianText_BtoN(&in->legacy_name[1], in->legacy_name[0]);
 	//	EndianText_BtoN(&in->legacy_path[1], in->legacy_path[0]);
@@ -749,24 +749,27 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 			case kEXIF_LensField				: dataFeed(uid, fname, text_ascii,       m->buf, l-8); break;
 				
 			case kEXIF_MeteringModeField		:
-			case kEXIF_ContrastField      		:
-			case kEXIF_SaturationField      	:
-			case kEXIF_SharpnessField      		:
-			case kEXIF_FocusModeField      		:
 			case kEXIF_ProgramField      		:
+			case kEXIF_FocusModeField      		:
 			case kEXIF_SensingMethodField      	:
 			case kEXIF_LightSourceField      	:
 			case kEXIF_FlashField      			:
-			case kEXIF_ISOSpeedField      		:
-			case kEXIF_NoiseReductionField      : dataFeed(uid, fname, number_sint16B,    m->buf, 1); break;
+			case kEXIF_ISOSpeedField      		: dataFeed(uid, fname, number_sint16B,    m->buf, 1); break;
 				
 			case kEXIF_ShutterSpeedField      	:
-			case kEXIF_DigitalZoomField      	:
 			case kEXIF_ApertureField		    :
 			case kEXIF_FocusDistanceField      	:
 			case kEXIF_FocalLengthField      	:
 			case kEXIF_ExposureBiasField      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
 				
+				/*
+				 UInt32 ii;
+				 memcpy(&ii, m->buf, 4);
+				 ii = EndianU32_BtoN(ii);
+				 current_time = ii;
+				 struct tm tms = *gmtime(&current_time);
+				 printf("%d %d %d %d %d %d", tms.tm_year, tms.tm_mon, tms.tm_mday, tms.tm_hour, tms.tm_min, tms.tm_sec);
+				 */
 			case kEXIF_CaptureDateField			: dataFeed(uid, fname, number_uint32,    m->buf, 1); break;
 				
 			case kGPS_LatitudeField		      	:
@@ -1017,8 +1020,6 @@ static const char *fieldName(UInt32 tag)
 		case kEXIF_MakerField				: return kEXIF_Maker;
 		case kEXIF_ModelField				: return kEXIF_Model;
 		case kEXIF_SoftwareField			: return kEXIF_Software;
-		case kEXIF_FormatField				: return kEXIF_Format;
-		case kEXIF_VersionField				: return kEXIF_Version;
 		case kEXIF_CaptureDateField			: return kEXIF_CaptureDate;
 		case kEXIF_ProgramField				: return kEXIF_Program;
 		case kEXIF_ISOSpeedField			: return kEXIF_ISOSpeed;
@@ -1031,12 +1032,7 @@ static const char *fieldName(UInt32 tag)
 		case kEXIF_FlashField				: return kEXIF_Flash;
 		case kEXIF_FocalLengthField			: return kEXIF_FocalLength;
 		case kEXIF_SensingMethodField		: return kEXIF_SensingMethod;
-		case kEXIF_NoiseReductionField		: return kEXIF_NoiseReduction;
-		case kEXIF_ContrastField			: return kEXIF_Contrast;
-		case kEXIF_SharpnessField			: return kEXIF_Sharpness;
-		case kEXIF_SaturationField			: return kEXIF_Saturation;
 		case kEXIF_FocusModeField			: return kEXIF_FocusMode;
-		case kEXIF_DigitalZoomField			: return kEXIF_DigitalZoom;
 		case kEXIF_LensField				: return kEXIF_Lens;
 			
 		case kGPS_LatitudeField		      	: return kGPS_Latitude;

@@ -35,7 +35,7 @@ int main(int argc, const char * argv[])
 	SInt16 status;
 	SInt16 total;
 //	char *filename = "/Users/yan/Downloads/SAMPLE-AAA/_Hifi.ivc";
-	char *filename = "/Users/yan/Downloads/_Travels.ivc";
+	char *filename = "/Users/yan/Downloads/SAMPLE-AAA/_Travels.ivc";
 
 	IVCOpen(filename, &total, &status);
 	printf("%s [open status = %d, file count = %d]\r", filename, status, total);

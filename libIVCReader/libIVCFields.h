@@ -10,31 +10,22 @@
 #define __libIVCFields__
 
 // Path strings contain components separated by slash '/'
-#define kPATH_FileTree				"PATH_FileTree"			// string, path
-#define kPATH_SetTree				"PATH_SetTree"			// string, path, repeating
-#define kPATH_KeywordTree			"PATH_KeywordTree"		// string, path, repeating
+#define kPATH_FileTree				"PATH_FileTree"				// string_utf8,
+#define kPATH_SetTree				"PATH_SetTree"				// string_utf8 		: repeating field
+#define kPATH_KeywordTree			"PATH_KeywordTree"			// string_utf8 		: repeating field
 
-#define kINFO_Label					"INFO_Label"
-#define kINFO_Rating				"INFO_Rating"
+#define kINFO_Label					"INFO_Label"				// number_sint32 	: value range 0-5
+#define kINFO_Rating				"INFO_Rating"				// number_sint32 	: value range 0-9
+#define kINFO_Width					"INFO_Width"				// number_sint32 	: pixels
+#define kINFO_Height				"INFO_Height"				// number_sint32 	: pixels
+#define kINFO_Resolution			"INFO_Resolution"			// number_sint32 	: dpi
+#define kINFO_Depth					"INFO_Depth"				// number_sint32 	: Image Color, bits per channel
+#define kINFO_Duration				"INFO_Duration"				// number_sint32	: Audio Video Duration in seconds/10
+#define kINFO_ColorSpace			"INFO_ColorSpace"			// string_utf8		: e.g. 'RGB ', 'GRAY' etc.
+#define kINFO_ColorProfile			"INFO_ColorProfile"			// string_utf8
+#define kINFO_URLSource			 	"INFO_URLSource"			// string_utf8
 
-#define kINFO_Width					"INFO_Width"
-#define kINFO_Height				"INFO_Height"
-#define kINFO_Resolution			"INFO_Resolution"
-#define kINFO_Depth					"INFO_Depth"
-#define kINFO_ColorSpace			"INFO_ColorSpace"
-#define kINFO_ColorProfile			"INFO_ColorProfile"
-
-#define kINFO_Tracks				"INFO_Tracks"
-#define kINFO_Duration				"INFO_Duration"
-#define kINFO_Channels				"INFO_Channels"
-#define kINFO_SampleRate			"INFO_SampleRate"
-#define kINFO_SampleSize			"INFO_SampleSize"
-
-#define kINFO_VDFrameRate			"INFO_VDFrameRate"
-#define kINFO_AVDataRate			"INFO_AVDataRate"
-
-#define kINFO_URLSource			 	"INFO_URLSource"
-
+// kIPTC_xxx are all string_utf8
 #define kIPTC_Headline				"IPTC_Headline"
 #define kIPTC_Title					"IPTC_Title"
 #define kIPTC_PrimaryCategory		"IPTC_PrimaryCategory"
@@ -66,43 +57,37 @@
 #define kIPTC_Status				"IPTC_Status"
 #define kIPTC_CaptionWriter			"IPTC_CaptionWriter"
 #define kIPTC_Caption				"IPTC_Caption"
-#define kIPTC_People				"IPTC_People"
-#define kIPTC_Keyword				"IPTC_Keyword"
-#define kIPTC_Category				"IPTC_Category"
-#define kIPTC_Scene					"IPTC_Scene"
-#define kIPTC_SubjectReference		"IPTC_SubjectReference"
+#define kIPTC_People				"IPTC_People"				// string_utf8 		: repeating field
+#define kIPTC_Keyword				"IPTC_Keyword"				// string_utf8 		: repeating field
+#define kIPTC_Category				"IPTC_Category"				// string_utf8 		: repeating field
+#define kIPTC_Scene					"IPTC_Scene"				// string_utf8 		: repeating field
+#define kIPTC_SubjectReference		"IPTC_SubjectReference"		// string_utf8 		: repeating field
 
-#define kEXIF_Maker					"EXIF_Maker"
-#define kEXIF_Model					"EXIF_Model"
-#define kEXIF_Software				"EXIF_Software"
-#define kEXIF_Format				"EXIF_Format"
-#define kEXIF_Version				"EXIF_Version"
-#define kEXIF_CaptureDate			"EXIF_CaptureDate"
-#define kEXIF_Program				"EXIF_Program"
-#define kEXIF_ISOSpeed				"EXIF_ISOSpeed"
-#define kEXIF_ExposureBias			"EXIF_ExposureBias"
-#define kEXIF_ShutterSpeed			"EXIF_ShutterSpeed"
-#define kEXIF_Aperture				"EXIF_Aperture"
-#define kEXIF_FocusDistance			"EXIF_FocusDistance"
-#define kEXIF_MeteringMode			"EXIF_MeteringMode"
-#define kEXIF_LightSource			"EXIF_LightSource"
-#define kEXIF_Flash					"EXIF_Flash"
-#define kEXIF_FocalLength			"EXIF_FocalLength"
-#define kEXIF_SensingMethod			"EXIF_SensingMethod"
-#define kEXIF_NoiseReduction		"EXIF_NoiseReduction"
-#define kEXIF_Contrast				"EXIF_Contrast"
-#define kEXIF_Sharpness				"EXIF_Sharpness"
-#define kEXIF_Saturation			"EXIF_Saturation"
-#define kEXIF_FocusMode				"EXIF_FocusMode"
-#define kEXIF_DigitalZoom			"EXIF_DigitalZoom"
-#define kEXIF_Lens					"EXIF_Lens"
+#define kEXIF_Software				"EXIF_Software"				// string_utf8
+#define kEXIF_Maker					"EXIF_Maker"				// string_utf8
+#define kEXIF_Model					"EXIF_Model"				// string_utf8
+#define kEXIF_Lens					"EXIF_Lens"					// string_utf8
+#define kEXIF_CaptureDate			"EXIF_CaptureDate"			// number_uint32	: in seconds
+#define kEXIF_ShutterSpeed			"EXIF_ShutterSpeed"			// number_rational
+#define kEXIF_Aperture				"EXIF_Aperture"				// "
+#define kEXIF_FocusDistance			"EXIF_FocusDistance"		// "
+#define kEXIF_FocalLength			"EXIF_FocalLength"			// "
+#define kEXIF_ExposureBias			"EXIF_ExposureBias"			// "
+#define kEXIF_MeteringMode			"EXIF_MeteringMode"			// number_sint32
+#define kEXIF_Program				"EXIF_Program"				// "
+#define kEXIF_LightSource			"EXIF_LightSource"			// "
+#define kEXIF_Flash					"EXIF_Flash"				// " (this is some kind of bitword)
+#define kEXIF_SensingMethod			"EXIF_SensingMethod"		// "
+#define kEXIF_FocusMode				"EXIF_FocusMode"			// "
+#define kEXIF_ISOSpeed				"EXIF_ISOSpeed"				// "
 
-#define kGPS_Altitude		      	"GPS_Altitude"
-#define kGPS_Latitude		      	"GPS_Latitude"
-#define kGPS_Longitude		      	"GPS_Longitude"
-#define kGPS_LatitudeRef			"GPS_LatitudeRef"
-#define kGPS_LongitudeRef			"GPS_LongitudeRef"
+#define kGPS_Altitude		      	"GPS_Altitude"				// number_rational
+#define kGPS_Latitude		      	"GPS_Latitude"				// number_rational3
+#define kGPS_Longitude		      	"GPS_Longitude"				// number_rational3
+#define kGPS_LatitudeRef			"GPS_LatitudeRef"			// string_utf8		: N/S
+#define kGPS_LongitudeRef			"GPS_LongitudeRef"			// string_utf8		: W/E
 
+// User Fields are all string_utf8
 #define kUF_01						"UF_01"
 #define kUF_02						"UF_02"
 #define kUF_03						"UF_03"
