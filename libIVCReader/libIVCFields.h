@@ -16,6 +16,7 @@
 
 #define kINFO_Label					"INFO_Label"				// number_sint32 	: value range 0-5
 #define kINFO_Rating				"INFO_Rating"				// number_sint32 	: value range 0-9
+#define kINFO_FileSize				"INFO_FileSize"				// number_uint32 	: File size
 #define kINFO_Width					"INFO_Width"				// number_sint32 	: pixels
 #define kINFO_Height				"INFO_Height"				// number_sint32 	: pixels
 #define kINFO_Resolution			"INFO_Resolution"			// number_sint32 	: dpi

@@ -44,7 +44,7 @@ typedef void (*DataFeed)(void *clientInfo,
 extern  "C" {
 #endif
 
-void IVCOpen(char *filename, SInt16 *total, SInt16 *err);
+void IVCOpen(char *filename, SInt16 *fileCount, SInt16 *err);
 void IVCReport(void *clientInfo, DataFeed dataFeed, SInt16 *err);
 void IVCClose(void);
 

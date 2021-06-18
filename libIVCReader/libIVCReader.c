@@ -11,10 +11,11 @@
 #include "private.h"
 #include "libIVCReader.h"
 
-#define kVersionNumber 	"1.0a1"
+#define kVersionNumber 	"1.0a2"
 #define kVersionDate	"27.May.21"
 
 // Local cariables
+static OSType			gCatFormat;
 static UInt32			gFileCount;
 static UInt32			gCurrentChuckOffset;
 static UInt32 			gUserFieldCount = 0;
@@ -34,13 +35,14 @@ enum {
 #pragma mark -
 
 ////
-void IVCOpen(char *filename, SInt16 *outTotal, SInt16 *outStatus)
+void IVCOpen(char *filename, SInt16 *outFileCount, SInt16 *outStatus)
 {
 	printf("\rlibIVCReader %s [%s]\r\r", kVersionNumber, kVersionDate);
 
-	UInt32 total = 0;
 	OSErr myErr = noErr;
-	
+	gFileCount = 0;
+	gCatFormat = 0;
+
 	gfp = fopen(filename, "r");
 	if( !gfp )
 	{
@@ -48,47 +50,31 @@ void IVCOpen(char *filename, SInt16 *outTotal, SInt16 *outStatus)
 		goto bail;
 	}
 	
-	UInt32	bytes;
-	UInt32	version;
-	
+	UInt32 bytes;
+
 	/////////////////
 	// READ THE FILE HEADER
 	bytes = 4;
-	if((myErr = myfread(gfp, &bytes, &total)) ||
-	   (myErr = myfread(gfp, &bytes, &version)) )
+	if((myErr = myfread(gfp, &bytes, &gFileCount)) ||
+	   (myErr = myfread(gfp, &bytes, &gCatFormat)) )
 		goto bail;
-	version = EndianU32_BtoN(version);
-	total = EndianU32_BtoN(total);
-	if( version != kCatalogFileFormat )
-	{
-		myErr = unsupportedVersionErr;
-		goto bail;
-	}
+
+	/*
+	 DETERMINE IF THIS IS :
+	 (a) Early iView Verions (ignore)
+	 (b) A "PRO" FILE, BY READING THE FILE FOOTER (2 LONGS) : IF THE 1ST OF THE 2 LONGS = kCatalog025iFormat WE HAVE A PRO FILE
+	 (b) A "PHASE ONE" FILE, FILE FOOTER
+	 */
 	
-	/////////////////
-	// DETERMINE IF THIS IS A "PRO" FILE, BY READING THE FILE FOOTER (2 LONGS)
-	// IF THE 1ST OF THE 2 LONGS = kCatalogFileFormat WE HAVE A PRO FILE
-	bytes = 4;
-	version = 0;
-	if((myErr = myfseek(gfp, SEEK_END, -8)) ||
-	   (myErr = myfread(gfp, &bytes, &version)))
-		goto bail;
-	version = EndianU32_BtoN(version);
-	if( version != kCatalogFileFormat )
-	{
-		myErr = unsupportedVersionErr;
-		goto bail;
-	}
-	
-	/////////////////
-	// READ CATALOG EXTRAS
-	gFileCount = total;
-	
+	gCatFormat = EndianU32_BtoN(gCatFormat);
+	myErr = ConfirmFormat(gfp);
+	gFileCount = ( myErr == noErr ) ? EndianU32_BtoN(gFileCount): 0;
+
 bail:
 	if( outStatus )
 		*outStatus = myErr;
-	if( outTotal )
-		*outTotal = total;
+	if( outFileCount )
+		*outFileCount = gFileCount;
 	
 	if( myErr && gfp )
 	{
@@ -103,7 +89,15 @@ void IVCReport(void *inClientInfo, DataFeed inDataFeed, SInt16 *outStatus)
 	outFeed = inDataFeed;
 	outClientInfo = inClientInfo;
 	
-	OSErr myErr = gfp ? ReadCatalogChunks(gfp): parsingCantStartErr;
+	OSErr myErr = noErr;
+	
+	if( gfp && gCatFormat == kCatalog025iFormat )
+		myErr = ReadCatalog32BitChunks(gfp);
+	else if( gfp && gCatFormat == kCatalog030iFormat )
+		myErr = ReadCatalog64BitChunks(gfp);
+	else
+		myErr = parsingCantStartErr;
+
 	if( outStatus )
 		*outStatus = myErr;
 }
@@ -217,7 +211,26 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 #pragma mark -
 
 ////
-static OSErr ReadCatalogChunks(FILE *fp)
+static OSErr ConfirmFormat(FILE *fp)
+{
+	OSErr myErr = noErr;
+	OSType confirmFormat = 0;
+	UInt32 bytes = 4;
+	size_t offset = (gCatFormat == kCatalog025iFormat) ? -8:-12;
+	
+	if((myErr = myfseek(fp, SEEK_END, offset)) ||
+	   (myErr = myfread(fp, &bytes, &confirmFormat)))
+		return myErr;
+
+	confirmFormat = EndianU32_BtoN(confirmFormat);
+	if( confirmFormat != gCatFormat )
+		myErr = unsupportedVersionErr;
+	
+	return myErr;
+}
+
+////
+static OSErr ReadCatalog32BitChunks(FILE *fp)
 {
 	OSErr		myErr = noErr;
 	OSType		chunkTag;
@@ -233,7 +246,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 	   (myErr = myfseek(fp, SEEK_SET, EndianU32_BtoN(offset))))
 		return myErr;
 	
-	// read all sets until we hit chunkTag = kCatalogFileFormat or an error
+	// read all sets until we hit chunkTag = kCatalog025iFormat or an error
 	while( !myErr )
 	{
 		bytes = 4;
@@ -242,7 +255,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 		chunkTag = EndianU32_BtoN(chunkTag);
 		
 		// Detect end of extras
-		if( chunkTag == kCatalogFileFormat )
+		if( chunkTag == gCatFormat )
 			break;
 		
 		// Get size of this xtra block
@@ -250,7 +263,7 @@ static OSErr ReadCatalogChunks(FILE *fp)
 			break;
 		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
 		
-		// printf("\r--- %s\r", FourCC2Str(chunkTag));
+		printf("\r--- %s\r", FourCC2Str(chunkTag));
 		gCurrentChuckOffset = (UInt32) ftell(fp);
 		
 		switch( chunkTag )
@@ -276,29 +289,110 @@ static OSErr ReadCatalogChunks(FILE *fp)
 				
 			case kCatalogFSMTag:
 				myErr = ReadFolders(fp, "");
-				if( !myErr )
-					myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
 				break;
 				
 			case kCatalogCellListTag:
-				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
-				if( !myErr )
+				if( !(myErr = ReadAsPtr(fp, &chunkData, chunkBytes)) )
 				{
-					if( gFileCount != chunkBytes/sizeof(CellInfo) )
-						myErr = wrongFileCountErr;
-					else
-						myErr = ReadFileCells(fp, (CellInfo *)chunkData, gFileCount);
-					
-					if( !myErr )
-						myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
+					long cellSize = sizeof(CellInfo32);
+					myErr = ( gFileCount * cellSize == chunkBytes ) ?
+						ReadFileCells(fp, (CellInfo32 *)chunkData, gFileCount):
+						wrongFileCountErr;
 					free(chunkData);
 				}
 				break;
 				
 			default:
-				myErr = myfseek(fp, SEEK_CUR, chunkBytes);
 				break;
 		}
+
+		if( !myErr )
+			myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
+	}
+	
+	return myErr;
+}
+
+////
+static OSErr ReadCatalog64BitChunks(FILE *fp)
+{
+	OSErr		myErr = noErr;
+	OSType		chunkTag;
+	char *		chunkData;
+	UInt32		chunkBytes;
+	UInt64		offset;
+	UInt32		bytes;
+	
+	// go to the contents offset
+	bytes = 8;
+	if((myErr = myfseek(fp, SEEK_END, -8)) ||
+	   (myErr = myfread(fp, &bytes, &offset)) ||
+	   (myErr = myfseek(fp, SEEK_SET, EndianU64_BtoN(offset))))
+		return myErr;
+	
+	// read all sets until we hit chunkTag = kCatalog025iFormat or an error
+	while( !myErr )
+	{
+		bytes = 4;
+		if( (myErr = myfread(fp, &bytes, &chunkTag)) )
+			break;
+		chunkTag = EndianU32_BtoN(chunkTag);
+		
+		// Detect end of extras
+		if( chunkTag == gCatFormat )
+			break;
+		
+		// Get size of this xtra block (tis is still 32 bit??)
+		bytes = 4;
+		if( (myErr = myfread(fp, &bytes, &chunkBytes)) )
+			break;
+		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
+		
+		printf("\r--- %s\r", FourCC2Str(chunkTag));
+		gCurrentChuckOffset = (UInt32) ftell(fp);
+		
+		switch( chunkTag )
+		{
+			case kCatalogUserFieldsTag:
+				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
+				if( !myErr )
+				{
+					UnflattenStart(chunkData, chunkBytes, unflattenUFieldProc);
+					free(chunkData);
+				}
+				break;
+				
+			case kCatalogMorselsTag:
+				// This contains all visible morsels + keywords tree + sets tree
+				myErr = ReadAsPtr(fp, &chunkData, chunkBytes);
+				if( !myErr )
+				{
+					ParseMorsels(chunkData, chunkBytes);
+					free(chunkData);
+				}
+				break;
+				
+			case kCatalogFSMTag:
+				myErr = ReadFolders(fp, "");
+				break;
+				
+			case kCatalogCellListTag:
+				if( !(myErr = ReadAsPtr(fp, &chunkData, chunkBytes)) )
+				{
+					long cellSize = sizeof(CellInfo64);
+					myErr = ( gFileCount * cellSize == chunkBytes ) ?
+						ReadFileCells(fp, (CellInfo32 *)chunkData, gFileCount):
+						wrongFileCountErr;
+					free(chunkData);
+				}
+				break;
+				
+			default:
+				break;
+		}
+
+		if( !myErr )
+			myErr = myfseek(fp, SEEK_SET, (SInt32) gCurrentChuckOffset + chunkBytes);
 	}
 	
 	return myErr;
@@ -576,43 +670,73 @@ bail:
 #pragma mark - File Items
 
 ////
-static OSErr ReadFileCells(FILE *fp, CellInfo *ci, UInt32 total)
+static OSErr ReadFileCells(FILE *fp, void *buffer, UInt32 total)
 {
 	OSErr myErr = noErr;
 	
-	for(; total && !myErr; total--, ci++)
+	if( gCatFormat == kCatalog025iFormat )
 	{
-		ci->catoffset	= EndianU32_BtoN(ci->catoffset);
-		ci->uniqueID 	= EndianU32_BtoN(ci->uniqueID);
-		
-		SInt16 v;
-		
-		v = ci->flags.label;
-		dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
-		v = ci->flags.rating;
-		dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
-
-		myErr = ReadFileBlocks(fp, ci);
+		CellInfo32 *ci = buffer;
+		for(; total && !myErr; total--, ci++)
+		{
+			ci->catoffset	= EndianU32_BtoN(ci->catoffset);
+			ci->uniqueID 	= EndianU32_BtoN(ci->uniqueID);
+			
+			SInt16 v;
+			
+			v = ci->flags.label;
+			if( v )
+				dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
+			v = ci->flags.rating;
+			if( v )
+				dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
+			
+			myErr = ReadFileBlocks(fp, ci->uniqueID, ci->catoffset);
+		}
+	}
+	else
+	{
+		CellInfo64 *ci = buffer;
+		for(; total && !myErr; total--, ci++)
+		{
+			ci->catoffset	= EndianU64_BtoN(ci->catoffset);
+			ci->uniqueID 	= EndianU32_BtoN(ci->uniqueID);
+			
+			SInt16 v;
+			
+			v = ci->flags.label;
+			if( v )
+				dataFeed(ci->uniqueID, kINFO_Label, number_sint16N, &v, 0);
+			v = ci->flags.rating;
+			if( v )
+				dataFeed(ci->uniqueID, kINFO_Rating, number_sint16N, &v, 0);
+			
+			myErr = ReadFileBlocks(fp, ci->uniqueID, ci->catoffset);
+		}
 	}
 	
 	return myErr;
 }
 
 ////
-static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
+static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 {
 	OSErr		myErr = noErr;
 	UInt32		bytes;
-	UInt32 		offset;
 	
-	offset = ci->catoffset;
 	RecordCache cache = {0};
 	
+	if( uniqueID == 95 )
+	{
+		printf("uniqueID == 95");
+	}
+
 	bytes = sizeof(ItemInfo);
 	if((myErr = myfseek(fp, SEEK_SET, offset)) ||
 	   (myErr = myfread(fp, &bytes, &cache.info)) )
 		return myErr;
-	ParseBlockINFO(ci->uniqueID, &cache.info);
+	
+	ParseBlockINFO(uniqueID, &cache.info);
 	
 	cache.info.talkSize = EndianS32_BtoN(cache.info.talkSize);
 	cache.info.metaSize = EndianS32_BtoN(cache.info.metaSize);
@@ -628,7 +752,7 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.iptcSize)))
 			return myErr;
-		ParseBlockIPTC(ci->uniqueID, data, cache.info.iptcSize);
+		ParseBlockIPTC(uniqueID, data, cache.info.iptcSize);
 		free(data);
 	}
 	
@@ -640,7 +764,7 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize + cache.info.urlfSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.metaSize)))
 			return myErr;
-		ParseBlockEXIF(ci->uniqueID, data, cache.info.metaSize);
+		ParseBlockEXIF(uniqueID, data, cache.info.metaSize);
 		free(data);
 	}
 	
@@ -652,7 +776,7 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
 			return myErr;
-		dataFeed(ci->uniqueID, kINFO_URLSource, text_ascii, data, bytes);
+		dataFeed(uniqueID, kINFO_URLSource, text_ascii, data, bytes);
 		free(data);
 	}
 	
@@ -662,22 +786,23 @@ static OSErr ReadFileBlocks(FILE *fp, CellInfo *ci)
 ////
 static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 {
-	dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
-	dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
-	dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
-	dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
-	dataFeed(uid, kINFO_Duration 	 , number_uint32, &in->duration, 1);
-	
-//	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
-//	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
-//	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
-//	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
-
-	dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
+	if( in->fileSize > 0    ) dataFeed(uid, kINFO_FileSize 	   , number_uint32, &in->fileSize, 1);
+	if( in->width > 0       ) dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
+	if( in->height > 0      ) dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
+	if( in->resolution > 0  ) dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
+	if( in->depth > 0       ) dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
+	if( in->duration > 0    ) dataFeed(uid, kINFO_Duration	   , number_uint32, &in->duration, 1);
+	if( in->colorProfile[0] ) dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
 
 	char *css = UTF8_FROM_ASCII((UInt8*)&in->colorSpace, 4);
-	dataFeed(uid, kINFO_ColorSpace 	 , text_outString, css, 1);
+	if( css[0] )
+		dataFeed(uid, kINFO_ColorSpace 	 , text_outString, css, 1);
 	free(css);
+
+	//	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
+	//	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
+	//	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
+	//	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
 
 	//	EndianText_BtoN(&in->legacy_name[1], in->legacy_name[0]);
 	//	EndianText_BtoN(&in->legacy_path[1], in->legacy_path[0]);
@@ -890,7 +1015,7 @@ static OSErr myfread(FILE *fp, UInt32 *len, void *val)
 }
 
 ////
-static OSErr myfseek(FILE *fp, int ref, SInt32 len)
+static OSErr myfseek(FILE *fp, int ref, size_t len)
 {
 	int status = fseek(fp, len, ref);
 	OSErr err = ( status == 0 ) ?  noErr: wrongOffsetErr;
