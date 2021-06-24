@@ -11,8 +11,8 @@
 #include "private.h"
 #include "libIVCReader.h"
 
-#define kVersionNumber 	"1.0a3"
-#define kVersionDate	"27.May.21"
+#define kVersionNumber 	"1.0"
+#define kVersionDate	"24.June.21"
 
 // Local cariables
 static OSType			gCatFormat;

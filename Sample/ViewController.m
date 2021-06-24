@@ -11,10 +11,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 @interface ViewController ()
 {
-	NSMutableDictionary <NSNumber*, NSMutableDictionary*> *items;
 	__weak IBOutlet NSTextField *text1;
 	__weak IBOutlet NSTextField *text2;
 	__weak IBOutlet NSTextField *text3;
+
+	NSMutableDictionary <NSNumber*, NSMutableDictionary*> *items;
 }
 @end
 
@@ -24,20 +25,7 @@
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
-
-	char *filename =
-	//"/Users/yan/Downloads/Sample_Catalogs/Hifi.ivc";
-	"/Users/yan/Downloads/Sample_Catalogs/Travels.ivc";
-	//"/Users/yan/Downloads/Sample_Catalogs/Family Photos.ivc";
-	//"/Users/yan/Downloads/Sample_Catalogs/Catalog-1.mpcatalog";
-	// "/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
-	// "/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
-
-	text1.stringValue = [NSString stringWithCString:filename encoding:NSUTF8StringEncoding];
-	text2.stringValue = @"";
-	text3.stringValue = @"";
-
-	[self runParser:filename];
+	[self runParser];
 }
 
 
@@ -47,10 +35,20 @@
 #define _logAsDictionaries
 
 ////
-- (void)runParser:(char *)filename
+- (void)runParser
 {
+	char *filename =
+	//"/Users/yan/Downloads/Sample_Catalogs/Hifi.ivc";
+	"/Users/yan/Downloads/Sample_Catalogs/Travels.ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Family Photos.ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Catalog-1.mpcatalog";
+	// "/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
+	// "/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
+
 	items = NSMutableDictionary.new;
 	
+	text1.stringValue = [NSString stringWithCString:filename encoding:NSUTF8StringEncoding];
+
 	[NSThread detachNewThreadWithBlock:^{
 		
 		SInt16 status;

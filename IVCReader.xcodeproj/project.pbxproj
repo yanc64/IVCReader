@@ -14,6 +14,8 @@
 		2C287920265F709D007F1DF8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C28791F265F709D007F1DF8 /* main.m */; };
 		2C287927265F71C7007F1DF8 /* libIVCReader.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */; };
 		2C28792A265F71D0007F1DF8 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
+		2CD1339326846EEC000CD985 /* LICENSE.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CD1339126846945000CD985 /* LICENSE.txt */; };
+		2CD1339426846EF2000CD985 /* README.md in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CD1339226846945000CD985 /* README.md */; };
 		2CDF3CE6265EC73A00A31FD1 /* libIVCReader.c in Sources */ = {isa = PBXBuildFile; fileRef = 2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */; };
 		2CEC7C64267CDD43000DFD5A /* libIVCReader.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CDF3CE5265EC73A00A31FD1 /* libIVCReader.h */; };
 		2CEC7C65267CDD45000DFD5A /* libIVCFields.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CDF3CEB265EDCE700A31FD1 /* libIVCFields.h */; };
@@ -40,11 +42,13 @@
 		2CEC7C63267CDD2C000DFD5A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = libIVCReader.headers;
+			dstPath = libIVCReader;
 			dstSubfolderSpec = 16;
 			files = (
 				2CEC7C64267CDD43000DFD5A /* libIVCReader.h in CopyFiles */,
 				2CEC7C65267CDD45000DFD5A /* libIVCFields.h in CopyFiles */,
+				2CD1339326846EEC000CD985 /* LICENSE.txt in CopyFiles */,
+				2CD1339426846EF2000CD985 /* README.md in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

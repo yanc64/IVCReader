@@ -6,7 +6,7 @@ libIVCReader is a C library for reading media catalog files (.ivc and maybe othe
 
 To use libIVCReader, you will need to  
 1. Add libIVCReader.a static library to your project
-2. Include files : libIVCReader.h and libIVCFields.h
+2. Include folder libIVCReader (see Products folder) with header files : libIVCReader.h and libIVCFields.h
 
 You can run the library in a thread.
 
