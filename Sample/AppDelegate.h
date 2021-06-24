@@ -1,6 +1,6 @@
 //
 //  AppDelegate.h
-//  ivrObjc
+//  Sample App
 //
 //  Created by Yannis Calotychos on 27/5/21.
 //

@@ -3,7 +3,7 @@
 //  libIVCReader
 //
 //  Created by Yannis Calotychos on 21/05/2021.
-//  Copyright © 2021 Smart Toolbox Ideas. All rights reserved.
+//  See LICENSE.txt folder for information.
 //
 
 #ifndef __libIVCReader__
