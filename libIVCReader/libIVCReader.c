@@ -11,14 +11,13 @@
 #include "private.h"
 #include "libIVCReader.h"
 
-#define kVersionNumber 	"1.0a2"
+#define kVersionNumber 	"1.0a3"
 #define kVersionDate	"27.May.21"
 
 // Local cariables
 static OSType			gCatFormat;
 static UInt32			gFileCount;
 static UInt32			gCurrentChuckOffset;
-static UInt32 			gUserFieldCount = 0;
 static bool 			gMorselIsHK = false;
 
 static FILE *			gfp;
@@ -486,7 +485,8 @@ static char *unflattenMorselProc(char *path, void *inData, UInt32 inSize)
 ////
 static char *unflattenUFieldProc(char *path, void *inData, UInt32 inSize)
 {
-	dataFeed(gUserFieldCount++, kUF_Definition, text_utf16, inData, inSize);
+	// User field definitiona return withh uid = 0
+	dataFeed(0, kUF_Definition, text_utf16, inData, inSize);
 	return nil;
 }
 
@@ -786,13 +786,13 @@ static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 ////
 static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 {
-	if( in->fileSize > 0    ) dataFeed(uid, kINFO_FileSize 	   , number_uint32, &in->fileSize, 1);
-	if( in->width > 0       ) dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
-	if( in->height > 0      ) dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
-	if( in->resolution > 0  ) dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
-	if( in->depth > 0       ) dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
-	if( in->duration > 0    ) dataFeed(uid, kINFO_Duration	   , number_uint32, &in->duration, 1);
-	if( in->colorProfile[0] ) dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
+	/* if( in->fileSize > 0    ) */ dataFeed(uid, kINFO_FileSize     , number_uint32, &in->fileSize, 1);
+	/* if( in->width > 0       ) */ dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
+	/* if( in->height > 0      ) */ dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
+	/* if( in->resolution > 0  ) */ dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
+	/* if( in->depth > 0       ) */ dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
+	/* if( in->duration > 0    ) */ dataFeed(uid, kINFO_Duration     , number_uint32, &in->duration, 1);
+	/* if( in->colorProfile[0] ) */ dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
 
 	char *css = UTF8_FROM_ASCII((UInt8*)&in->colorSpace, 4);
 	if( css[0] )

@@ -7,17 +7,30 @@
 		<key>IVCReader.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>2</integer>
 		</dict>
-		<key>ivr.xcscheme_^#shared#^_</key>
+		<key>IVCReaderObjc.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>2</integer>
+			<integer>1</integer>
 		</dict>
 		<key>ivrObjc.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>2C287910265F709B007F1DF8</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>2C2CBF6126556BFB006D96A4</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

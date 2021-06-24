@@ -8,23 +8,36 @@
 #import "libIVCReader.h"
 #import "ViewController.h"
 
-@implementation ViewController
+///////////////////////////////////////////////////////////////////////////////////////////////////
+@interface ViewController ()
 {
 	NSMutableDictionary <NSNumber*, NSMutableDictionary*> *items;
+	__weak IBOutlet NSTextField *text1;
+	__weak IBOutlet NSTextField *text2;
+	__weak IBOutlet NSTextField *text3;
 }
+@end
 
-- (void)viewDidLoad {
+@implementation ViewController
+
+////
+- (void)viewDidLoad
+{
 	[super viewDidLoad];
 
-	// Do any additional setup after loading the view.
-	[self runParser];
-}
+	char *filename =
+	//"/Users/yan/Downloads/Sample_Catalogs/Hifi.ivc";
+	"/Users/yan/Downloads/Sample_Catalogs/Travels.ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Family Photos.ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Catalog-1.mpcatalog";
+	// "/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
+	// "/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
 
+	text1.stringValue = [NSString stringWithCString:filename encoding:NSUTF8StringEncoding];
+	text2.stringValue = @"";
+	text3.stringValue = @"";
 
-- (void)setRepresentedObject:(id)representedObject {
-	[super setRepresentedObject:representedObject];
-
-	// Update the view, if already loaded.
+	[self runParser:filename];
 }
 
 
@@ -34,33 +47,34 @@
 #define _logAsDictionaries
 
 ////
-- (void)runParser
+- (void)runParser:(char *)filename
 {
 	items = NSMutableDictionary.new;
 	
 	[NSThread detachNewThreadWithBlock:^{
-
+		
 		SInt16 status;
 		SInt16 total;
-		char *filename =
-		//"/Users/yan/Downloads/Sample_Catalogs/Hifi.ivc";
-		"/Users/yan/Downloads/Sample_Catalogs/Travels.ivc";
-		//"/Users/yan/Downloads/Sample_Catalogs/Family Photos.ivc";
-		//"/Users/yan/Downloads/Sample_Catalogs/Catalog-1.mpcatalog";
-		// "/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
-		// "/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
-
-
+		
+		// [1] Open file and watch for status return value
 		IVCOpen(filename, &total, &status);
-		NSLog(@"%s [open status = %d, file count = %d]\r", filename, status, total);
+		[self->text2 performSelectorOnMainThread:@selector(setStringValue:) withObject:( status == 0 ) ? [NSString stringWithFormat:@"File opened successfully. File count = %hd", total]: [NSString stringWithFormat:@"Error opening file [%hd]", status] waitUntilDone:YES];
 		
-		void *clientInfo = (__bridge void * _Nullable)(self);
+		if( status != 0 )
+			return;
 		
-		IVCReport(clientInfo, _dataFeedProc, &status);
-		NSLog(@"%s [read status = %d]\r", filename, status);
+		/////////////////////
+		// [2] Report and data found in file using _dataFeedProc callback
+		void *client = (__bridge void * _Nullable)(self);
+		IVCReport(client, _dataFeedProc, &status);
 		
+		if( status )
+			[self->text2 performSelectorOnMainThread:@selector(setStringValue:) withObject:[NSString stringWithFormat:@"Error reading file [%hd]", status] waitUntilDone:YES];
+		else
+			[self->text3 performSelectorOnMainThread:@selector(setStringValue:) withObject:@"File parsing done!" waitUntilDone:YES];
+		
+		// [3] Close file
 		IVCClose();
-		NSLog(@"%s [close]\r", filename);
 		
 #ifdef _logAsDictionaries
 		[self performSelectorOnMainThread:@selector(logItems:) withObject:nil waitUntilDone:YES];
@@ -78,7 +92,7 @@
 }
 
 ////
-static void _dataFeedProc(void *clientInfo,
+static void _dataFeedProc(void *client,
 						  const UInt32 uid,
 						  const char *fieldName,
 						  const UInt8 fieldType,
@@ -86,7 +100,7 @@ static void _dataFeedProc(void *clientInfo,
 						  )
 {
 	// can't use self in 'C' so we need to extract controller passed as an argument
-	ViewController *controller = (__bridge ViewController *)clientInfo;
+	ViewController *controller = (__bridge ViewController *)client;
 	[controller processFeedWithUID:uid fieldName:fieldName fieldType:fieldType fieldData:fieldData];
 }
 
