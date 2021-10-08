@@ -54,8 +54,13 @@
 		SInt16 status;
 		SInt16 total;
 		
+		bool wantsInfo = false;
+		bool wantsIptc = true;
+		bool wantsExif = false; // true;
+		bool wantsPict = false;
+
 		// [1] Open file and watch for status return value
-		IVCOpen(filename, &total, &status);
+		IVCOpen(filename, wantsInfo, wantsIptc, wantsExif, wantsPict, &total, &status);
 		[self->text2 performSelectorOnMainThread:@selector(setStringValue:) withObject:( status == 0 ) ? [NSString stringWithFormat:@"File opened successfully. File count = %hd", total]: [NSString stringWithFormat:@"Error opening file [%hd]", status] waitUntilDone:YES];
 		
 		if( status != 0 )
@@ -144,6 +149,20 @@ static void _dataFeedProc(void *client,
 													   [NSNumber numberWithInt:*(SInt32 *)&fieldData[12]],
 													   [NSNumber numberWithInt:*(SInt32 *)&fieldData[16]],
 													   [NSNumber numberWithInt:*(SInt32 *)&fieldData[20]]]; break;
+		case data_feed :
+		{
+			// binary_data (32-bit size + followed by data)
+			const UInt32 *len = (const UInt32 *)fieldData;
+			NSData *data = [NSData dataWithBytes:&fieldData[4] length:*len];
+			if( data )
+			{
+				properties[name] = data;
+				// Test data
+				// NSImage *image = [[NSImage alloc]initWithData:data];
+				// if( image )
+				//	NSLog(@"image size = %@", NSStringFromSize(image.size));
+			}
+		} break;
 	}
 }
 ////

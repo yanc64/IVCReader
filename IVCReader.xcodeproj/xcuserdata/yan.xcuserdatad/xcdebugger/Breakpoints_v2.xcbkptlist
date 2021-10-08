@@ -62,8 +62,8 @@
             filePath = "libIVCReader/libIVCReader.c"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "88"
-            endingLineNumber = "88"
+            startingLineNumber = "101"
+            endingLineNumber = "101"
             landmarkName = "IVCReport(inClientInfo, inDataFeed, outStatus)"
             landmarkType = "9">
          </BreakpointContent>
@@ -71,17 +71,17 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "4D8C2D11-C906-4709-8DB1-333F6B819CC8"
+            uuid = "671FBB09-1B8F-4344-A092-C74CE0228236"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "libIVCReader/libIVCReader.c"
+            filePath = "Sample/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "741"
-            endingLineNumber = "741"
-            landmarkName = "ReadFileBlocks(fp, uniqueID, offset)"
-            landmarkType = "9">
+            startingLineNumber = "159"
+            endingLineNumber = "159"
+            landmarkName = "-processFeedWithUID:fieldName:fieldType:fieldData:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

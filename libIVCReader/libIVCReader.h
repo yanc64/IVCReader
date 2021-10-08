@@ -30,6 +30,7 @@ enum {
 	number_uint32,			// unsigned integer 32 bit
 	number_rational,		// an array of 2 unsigned 32 bit integers. first is nominator, second is denominator
 	number_rational3,		// an array of 3 rationals (i.e. 6 x 32 bit integers)
+	data_feed,				// a set of bytes prepend by the length of bytes
 };
 
 typedef void (*DataFeed)(void *clientInfo,
@@ -44,7 +45,10 @@ typedef void (*DataFeed)(void *clientInfo,
 extern  "C" {
 #endif
 
-void IVCOpen(char *filename, SInt16 *fileCount, SInt16 *err);
+void IVCOpen(const char *filename,
+			 const bool wantsInfo, const bool wantsIptc, const bool wantsExif, const bool wantsPict,
+			 SInt16 *fileCount, SInt16 *status);
+
 void IVCReport(void *clientInfo, DataFeed dataFeed, SInt16 *err);
 void IVCClose(void);
 

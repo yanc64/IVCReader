@@ -20,13 +20,18 @@ static UInt32			gFileCount;
 static UInt32			gCurrentChuckOffset;
 static bool 			gMorselIsHK = false;
 
+static bool 			gWantsInfo = true;
+static bool 			gWantsIptc = true;
+static bool 			gWantsExif = true;
+static bool 			gWantsPict = true;
+
 static FILE *			gfp;
 static DataFeed 		outFeed;
 static void *			outClientInfo;
 
 enum {
 	text_outString, // null terminated
-	number_sint16N = 100, number_sint16B, text_utf16, text_utf8, text_ascii
+	number_sint16N = 100, number_sint16B, text_utf16, text_utf8, text_ascii, pict_data
 };
 
 
@@ -34,7 +39,9 @@ enum {
 #pragma mark -
 
 ////
-void IVCOpen(char *filename, SInt16 *outFileCount, SInt16 *outStatus)
+void IVCOpen(const char *filename,
+			 const bool wantsInfo, const bool wantsIptc, const bool wantsExif, const bool wantsPict,
+			 SInt16 *fileCount, SInt16 *status)
 {
 	printf("\rlibIVCReader %s [%s]\r\r", kVersionNumber, kVersionDate);
 
@@ -42,6 +49,12 @@ void IVCOpen(char *filename, SInt16 *outFileCount, SInt16 *outStatus)
 	gFileCount = 0;
 	gCatFormat = 0;
 
+	gWantsInfo = wantsInfo;
+	gWantsIptc = wantsIptc;
+	gWantsExif = wantsExif;
+	gWantsPict = wantsPict;
+
+	
 	gfp = fopen(filename, "r");
 	if( !gfp )
 	{
@@ -70,10 +83,10 @@ void IVCOpen(char *filename, SInt16 *outFileCount, SInt16 *outStatus)
 	gFileCount = ( myErr == noErr ) ? EndianU32_BtoN(gFileCount): 0;
 
 bail:
-	if( outStatus )
-		*outStatus = myErr;
-	if( outFileCount )
-		*outFileCount = gFileCount;
+	if( status )
+		*status = myErr;
+	if( fileCount )
+		*fileCount = gFileCount;
 	
 	if( myErr && gfp )
 	{
@@ -202,6 +215,35 @@ void dataFeed(const UInt32 uid, const char *fName, const UInt8 fieldType, void *
 					*sint32 = EndianS32_BtoN(*sint32);
 				outFeed(outClientInfo, uid, fName, fieldType, data);
 				break;
+				
+			case pict_data:
+#define kOffsetToJPEGSize 172
+#define kOffsetToJPEGData 214
+				if( strlen > kOffsetToJPEGData )
+				{
+					// In late cases (since iView 3?), a JPEG is wrapped inside a PICT enclosure.
+					// It has fixed offsets to the jpeg size and actual data.
+					unsigned char *	pict = data;
+					UInt32 *		len1 = (UInt32 *)&pict[kOffsetToJPEGSize];
+					UInt32			len  = EndianS32_BtoN(*len1);
+					
+					if( strlen >= len + kOffsetToJPEGData )
+					{
+						unsigned char *	jpeg = data + kOffsetToJPEGData;
+						
+						// check this is really a jpeg
+						if( jpeg[0] == 0xFF && jpeg[1] == 0xD8 )
+						{
+							// as there is no way in C to pass the length of data with the data itself,
+							// we make a copy of data and prepend with a 32 bit (its size).
+							unsigned char * feed = malloc(4 + len);
+							memcpy(feed, &len, 4);
+							memcpy(&feed[4], jpeg, len);
+							outFeed(outClientInfo, uid, fName, data_feed, feed);
+						}
+					}
+				}
+				break;
 		}
 }
 
@@ -262,7 +304,7 @@ static OSErr ReadCatalog32BitChunks(FILE *fp)
 			break;
 		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
 		
-		printf("\r--- %s\r", FourCC2Str(chunkTag));
+		// printf("\r--- %s\r", FourCC2Str(chunkTag));
 		gCurrentChuckOffset = (UInt32) ftell(fp);
 		
 		switch( chunkTag )
@@ -347,7 +389,7 @@ static OSErr ReadCatalog64BitChunks(FILE *fp)
 			break;
 		chunkBytes = EndianU32_BtoN(chunkBytes);	// MacOS to Native order
 		
-		printf("\r--- %s\r", FourCC2Str(chunkTag));
+		// printf("\r--- %s\r", FourCC2Str(chunkTag));
 		gCurrentChuckOffset = (UInt32) ftell(fp);
 		
 		switch( chunkTag )
@@ -726,27 +768,35 @@ static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 	
 	RecordCache cache = {0};
 	
-	if( uniqueID == 95 )
-	{
-		printf("uniqueID == 95");
-	}
-
 	bytes = sizeof(ItemInfo);
 	if((myErr = myfseek(fp, SEEK_SET, offset)) ||
 	   (myErr = myfread(fp, &bytes, &cache.info)) )
 		return myErr;
 	
-	ParseBlockINFO(uniqueID, &cache.info);
+	if( gWantsInfo )
+		ParseBlockINFO(uniqueID, &cache.info);
 	
 	cache.info.talkSize = EndianS32_BtoN(cache.info.talkSize);
 	cache.info.metaSize = EndianS32_BtoN(cache.info.metaSize);
 	cache.info.pictSize = EndianS32_BtoN(cache.info.pictSize);
 	cache.info.iptcSize = EndianS32_BtoN(cache.info.iptcSize);
 	cache.info.urlfSize = EndianS32_BtoN(cache.info.urlfSize);
+
+	///////
+	// Thumbnail PICT
+	if( gWantsPict && cache.info.pictSize )
+	{
+		Ptr data = nil;
+		if((myErr = myfseek(fp, SEEK_SET, offset + 1024)) ||
+		   (myErr = ReadAsPtr(fp, &data, cache.info.pictSize)))
+			return myErr;
+		dataFeed(uniqueID, kINFO_Thumbnail, pict_data, data, cache.info.pictSize);
+		free(data);
+	}
 	
 	///////
 	// Iptc
-	if( cache.info.iptcSize )
+	if( gWantsIptc && cache.info.iptcSize )
 	{
 		Ptr data = nil;
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize)) ||
@@ -757,26 +807,26 @@ static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 	}
 	
 	///////
-	// Meta
-	if( cache.info.metaSize )
-	{
-		Ptr data = nil;
-		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize + cache.info.urlfSize)) ||
-		   (myErr = ReadAsPtr(fp, &data, cache.info.metaSize)))
-			return myErr;
-		ParseBlockEXIF(uniqueID, data, cache.info.metaSize);
-		free(data);
-	}
-	
-	///////
-	// Surl
-	if( cache.info.urlfSize )
+	// Surl (return as Iptc group)
+	if( gWantsIptc && cache.info.urlfSize )
 	{
 		Ptr data = nil;
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
 			return myErr;
 		dataFeed(uniqueID, kINFO_URLSource, text_ascii, data, bytes);
+		free(data);
+	}
+	
+	///////
+	// Exif
+	if( gWantsExif && cache.info.metaSize )
+	{
+		Ptr data = nil;
+		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize + cache.info.urlfSize)) ||
+		   (myErr = ReadAsPtr(fp, &data, cache.info.metaSize)))
+			return myErr;
+		ParseBlockEXIF(uniqueID, data, cache.info.metaSize);
 		free(data);
 	}
 	
@@ -829,7 +879,18 @@ static void ParseBlockIPTC(const UInt32 uid, const Ptr buf, const long bufLen)
 			
 			////
 			const char *fname = fieldName(d.tag);
-			dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
+			
+			if( d.tag >= kUser01Field && d.tag <= kUser16Field )
+			{
+				// We don't really care what the contents of this field are
+				// Just that we have a membership of this item in this user field
+				// dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
+				dataFeed(uid, fname, text_ascii, (void *)fname, 5);
+			}
+			else
+			{
+				dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
+			}
 		}
 		// list has trailing garbage - ignore it
 		else
@@ -886,15 +947,6 @@ static void ParseBlockEXIF(const UInt32 uid, const Ptr buf, const UInt32 bufLen)
 			case kEXIF_FocusDistanceField      	:
 			case kEXIF_FocalLengthField      	:
 			case kEXIF_ExposureBiasField      	: dataFeed(uid, fname, number_rational,  m->buf, 1); break;
-				
-				/*
-				 UInt32 ii;
-				 memcpy(&ii, m->buf, 4);
-				 ii = EndianU32_BtoN(ii);
-				 current_time = ii;
-				 struct tm tms = *gmtime(&current_time);
-				 printf("%d %d %d %d %d %d", tms.tm_year, tms.tm_mon, tms.tm_mday, tms.tm_hour, tms.tm_min, tms.tm_sec);
-				 */
 			case kEXIF_CaptureDateField			: dataFeed(uid, fname, number_uint32,    m->buf, 1); break;
 				
 			case kGPS_LatitudeField		      	:
@@ -1090,9 +1142,6 @@ static char *UTF8_FROM_ASCII(UInt8 *srcBuf, size_t srcLen)
 	iconv(cvt, &srcPtr, &srcLen, &dstPtr, &dstLen);
 	iconv_close(cvt);
 	
-	// if( tstLen != dstLen )
-	//	printf("[%s]", dstBuf);
-	
 	return dstBuf;
 }
 
@@ -1184,6 +1233,5 @@ static const char *fieldName(UInt32 tag)
 		case kUser16Field					: return kUF_16;
 	}
 	
-	// printf("uknown tag %#010x\r", tag); // TRCK
 	return "<?>";
 }

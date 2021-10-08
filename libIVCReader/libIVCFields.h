@@ -25,6 +25,8 @@
 #define kINFO_ColorSpace			"INFO_ColorSpace"			// string_utf8		: e.g. 'RGB ', 'GRAY' etc.
 #define kINFO_ColorProfile			"INFO_ColorProfile"			// string_utf8
 #define kINFO_URLSource			 	"INFO_URLSource"			// string_utf8
+#define kINFO_Thumbnail			 	"INFO_Thumbnail"			// Binary data, possibly a JPEG
+
 
 // kIPTC_xxx are all string_utf8
 #define kIPTC_Headline				"IPTC_Headline"
