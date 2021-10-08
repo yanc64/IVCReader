@@ -1,0 +1,14 @@
+-------------------------------
+v1.1, 8 Oct 2021
+-------------------------------
+• added support for thumbnails
+• added conditional support for library data
+• change filename input parameter to constant
+• fixed user field bogus return values.
+  user field values must be ignored as they only represent the file's membership to the user field
+
+-------------------------------
+v1.0, 24 Jun 2021
+-------------------------------
+• first public release
+

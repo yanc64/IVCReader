@@ -66,6 +66,7 @@
 		2C28791F265F709D007F1DF8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2C287921265F709D007F1DF8 /* ivrObjc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ivrObjc.entitlements; sourceTree = "<group>"; };
 		2C856163265791A200988D91 /* private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = private.h; sourceTree = "<group>"; };
+		2C904E0427103A84009ADCB0 /* HISTORY.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = HISTORY.txt; sourceTree = "<group>"; };
 		2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.2.4.0.tbd; path = usr/lib/libiconv.2.4.0.tbd; sourceTree = SDKROOT; };
 		2CD1339126846945000CD985 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		2CD1339226846945000CD985 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -143,6 +144,7 @@
 			children = (
 				2CD1339126846945000CD985 /* LICENSE.txt */,
 				2CD1339226846945000CD985 /* README.md */,
+				2C904E0427103A84009ADCB0 /* HISTORY.txt */,
 				2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */,
 				2CDF3CE5265EC73A00A31FD1 /* libIVCReader.h */,
 				2CDF3CEB265EDCE700A31FD1 /* libIVCFields.h */,
