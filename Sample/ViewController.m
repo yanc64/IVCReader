@@ -42,8 +42,8 @@
 	"/Users/yan/Downloads/Sample_Catalogs/Travels.ivc";
 	//"/Users/yan/Downloads/Sample_Catalogs/Family Photos.ivc";
 	//"/Users/yan/Downloads/Sample_Catalogs/Catalog-1.mpcatalog";
-	// "/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
-	// "/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Catalog-unsplash (no read).ivc";
+	//"/Users/yan/Downloads/Sample_Catalogs/Crash on save.ivc";
 
 	items = NSMutableDictionary.new;
 	
@@ -54,10 +54,10 @@
 		SInt16 status;
 		SInt16 total;
 		
-		bool wantsInfo = false;
+		bool wantsInfo = true;
 		bool wantsIptc = true;
-		bool wantsExif = false; // true;
-		bool wantsPict = false;
+		bool wantsExif = true;
+		bool wantsPict = true;
 
 		// [1] Open file and watch for status return value
 		IVCOpen(filename, wantsInfo, wantsIptc, wantsExif, wantsPict, &total, &status);
