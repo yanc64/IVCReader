@@ -879,18 +879,7 @@ static void ParseBlockIPTC(const UInt32 uid, const Ptr buf, const long bufLen)
 			
 			////
 			const char *fname = fieldName(d.tag);
-			
-			if( d.tag >= kUser01Field && d.tag <= kUser16Field )
-			{
-				// We don't really care what the contents of this field are
-				// Just that we have a membership of this item in this user field
-				// dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
-				dataFeed(uid, fname, text_ascii, (void *)fname, 5);
-			}
-			else
-			{
-				dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
-			}
+			dataFeed(uid, fname, d.enc == kIPTC_Encoding_UTF8 ? text_utf8: text_ascii, d.buf, d.len);
 		}
 		// list has trailing garbage - ignore it
 		else

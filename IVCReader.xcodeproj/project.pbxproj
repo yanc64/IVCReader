@@ -14,6 +14,7 @@
 		2C287920265F709D007F1DF8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C28791F265F709D007F1DF8 /* main.m */; };
 		2C287927265F71C7007F1DF8 /* libIVCReader.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CDF3CDB265EC6BC00A31FD1 /* libIVCReader.a */; };
 		2C28792A265F71D0007F1DF8 /* libiconv.2.4.0.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CC1210A265E0CCF00D57534 /* libiconv.2.4.0.tbd */; };
+		2C904E0527103C5C009ADCB0 /* HISTORY.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2C904E0427103A84009ADCB0 /* HISTORY.txt */; };
 		2CD1339326846EEC000CD985 /* LICENSE.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CD1339126846945000CD985 /* LICENSE.txt */; };
 		2CD1339426846EF2000CD985 /* README.md in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2CD1339226846945000CD985 /* README.md */; };
 		2CDF3CE6265EC73A00A31FD1 /* libIVCReader.c in Sources */ = {isa = PBXBuildFile; fileRef = 2CDF3CE4265EC73A00A31FD1 /* libIVCReader.c */; };
@@ -49,6 +50,7 @@
 				2CEC7C65267CDD45000DFD5A /* libIVCFields.h in CopyFiles */,
 				2CD1339326846EEC000CD985 /* LICENSE.txt in CopyFiles */,
 				2CD1339426846EF2000CD985 /* README.md in CopyFiles */,
+				2C904E0527103C5C009ADCB0 /* HISTORY.txt in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
