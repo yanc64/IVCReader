@@ -56,8 +56,8 @@
 		
 		bool wantsInfo = true;
 		bool wantsIptc = true;
-		bool wantsExif = true;
-		bool wantsPict = true;
+		bool wantsExif = false;
+		bool wantsPict = false;
 
 		// [1] Open file and watch for status return value
 		IVCOpen(filename, wantsInfo, wantsIptc, wantsExif, wantsPict, &total, &status);

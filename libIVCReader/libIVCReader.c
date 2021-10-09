@@ -814,7 +814,7 @@ static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 		if((myErr = myfseek(fp, SEEK_SET, offset + 1024 + cache.info.pictSize + cache.info.iptcSize)) ||
 		   (myErr = ReadAsPtr(fp, &data, cache.info.urlfSize)))
 			return myErr;
-		dataFeed(uniqueID, kINFO_URLSource, text_ascii, data, bytes);
+		dataFeed(uniqueID, kIPTC_URL, text_ascii, data, bytes);
 		free(data);
 	}
 	
@@ -836,26 +836,19 @@ static OSErr ReadFileBlocks(FILE *fp, UInt32 uniqueID, size_t offset)
 ////
 static void ParseBlockINFO(const UInt32 uid, ItemInfo *in)
 {
-	/* if( in->fileSize > 0    ) */ dataFeed(uid, kINFO_FileSize     , number_uint32, &in->fileSize, 1);
-	/* if( in->width > 0       ) */ dataFeed(uid, kINFO_Width        , number_sint32, &in->width, 1);
-	/* if( in->height > 0      ) */ dataFeed(uid, kINFO_Height       , number_sint32, &in->height, 1);
-	/* if( in->resolution > 0  ) */ dataFeed(uid, kINFO_Resolution   , number_sint32, &in->resolution, 1);
-	/* if( in->depth > 0       ) */ dataFeed(uid, kINFO_Depth        , number_sint32, &in->depth, 1);
-	/* if( in->duration > 0    ) */ dataFeed(uid, kINFO_Duration     , number_uint32, &in->duration, 1);
-	/* if( in->colorProfile[0] ) */ dataFeed(uid, kINFO_ColorProfile , text_ascii, &in->colorProfile[1], in->colorProfile[0]);
-
+	dataFeed(uid, kINFO_FileSize     , number_uint32 , &in->fileSize, 1);
+	dataFeed(uid, kINFO_Created      , number_uint32 , &in->created, 1);
+	dataFeed(uid, kINFO_Width        , number_sint32 , &in->width, 1);
+	dataFeed(uid, kINFO_Height       , number_sint32 , &in->height, 1);
+	dataFeed(uid, kINFO_Resolution   , number_sint32 , &in->resolution, 1);
+	dataFeed(uid, kINFO_Depth        , number_sint32 , &in->depth, 1);
+	dataFeed(uid, kINFO_Duration     , number_uint32 , &in->duration, 1);
+	dataFeed(uid, kINFO_ColorProfile , text_ascii    , &in->colorProfile[1], in->colorProfile[0]);
+	
 	char *css = UTF8_FROM_ASCII((UInt8*)&in->colorSpace, 4);
 	if( css[0] )
 		dataFeed(uid, kINFO_ColorSpace 	 , text_outString, css, 1);
 	free(css);
-
-	//	dataFeed(uid, kINFO_Tracks 		 , number_sint32, &in->tracks, 1);
-	//	dataFeed(uid, kINFO_Channels 	 , number_sint32, &in->channels, 1);
-	//	dataFeed(uid, kINFO_SampleRate 	 , number_sint32, &in->sampleRate, 1);
-	//	dataFeed(uid, kINFO_SampleSize 	 , number_sint32, &in->sampleSize, 1);
-
-	//	EndianText_BtoN(&in->legacy_name[1], in->legacy_name[0]);
-	//	EndianText_BtoN(&in->legacy_path[1], in->legacy_path[0]);
 }
 
 ////

@@ -14,9 +14,11 @@
 #define kPATH_SetTree				"PATH_SetTree"				// string_utf8 		: repeating field
 #define kPATH_KeywordTree			"PATH_KeywordTree"			// string_utf8 		: repeating field
 
+#define kINFO_Created				"INFO_Created"				// number_uint32 	: File creation date (UTC) in seconds since midnight, January 1, 1904
+#define kINFO_FileSize				"INFO_FileSize"				// number_uint32 	: File size
+
 #define kINFO_Label					"INFO_Label"				// number_sint32 	: value range 0-5
 #define kINFO_Rating				"INFO_Rating"				// number_sint32 	: value range 0-9
-#define kINFO_FileSize				"INFO_FileSize"				// number_uint32 	: File size
 #define kINFO_Width					"INFO_Width"				// number_sint32 	: pixels
 #define kINFO_Height				"INFO_Height"				// number_sint32 	: pixels
 #define kINFO_Resolution			"INFO_Resolution"			// number_sint32 	: dpi
@@ -24,7 +26,6 @@
 #define kINFO_Duration				"INFO_Duration"				// number_sint32	: Audio Video Duration in seconds/10
 #define kINFO_ColorSpace			"INFO_ColorSpace"			// string_utf8		: e.g. 'RGB ', 'GRAY' etc.
 #define kINFO_ColorProfile			"INFO_ColorProfile"			// string_utf8
-#define kINFO_URLSource			 	"INFO_URLSource"			// string_utf8
 #define kINFO_Thumbnail			 	"INFO_Thumbnail"			// Binary data, possibly a JPEG
 
 
